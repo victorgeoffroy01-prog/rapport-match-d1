@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>D1 Futsal — Rapport de match v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F3F1EA;
+    --ink:#111111;
+    --red:#EF3B30;
+    --gray:#8A8A85;
+    /* Couleurs équipe placeholder — à remplacer par les vraies couleurs de club */
+    --team-a:#111111;   /* LAVAL */
+    --team-b:#EF3B30;   /* NICE */
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:#DEDAD0; font-family:'Poppins',sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:28px; padding:28px 0;
+  }
+  .card{
+    width:200mm; height:200mm;
+    background:var(--cream);
+    border:7px solid var(--ink);
+    border-radius:22px;
+    padding:10mm 11mm 8mm;
+    position:relative;
+    overflow:hidden;
+  }
+  .kicker{ color:var(--red); font-weight:800; font-size:16px; letter-spacing:0.3px; margin-bottom:6px; }
+  .rule{ height:4px; background:var(--ink); border:none; margin:0 0 16px; }
+  .title{ font-family:'Playfair Display','Lora',serif; font-weight:900; color:var(--ink); line-height:1.03; margin:0; }
+  .footer{ position:absolute; left:11mm; right:11mm; bottom:8mm; padding-top:10px; border-top:4px solid var(--ink); display:flex; justify-content:space-between; align-items:baseline; }
+  .footer .cap{ color:var(--gray); font-size:13px; }
+  .footer .pg{ font-weight:800; font-size:16px; }
+
+  /* ===== PAGE 1 : COVER ===== */
+  .logos-row{ display:flex; align-items:center; justify-content:center; gap:24px; margin:10px 0 8px; }
+  .logo-slot{ width:76px; height:76px; border:2px dashed #C9C4B4; border-radius:10px; display:flex;
+    align-items:center; justify-content:center; text-align:center; font-size:9px; color:var(--gray);
+    font-weight:700; flex-shrink:0; }
+  .logo-slot img{ max-width:100%; max-height:100%; }
+  .score-hero{ text-align:center; }
+  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:80px; line-height:1; }
+  .teams-row{ display:flex; justify-content:space-around; font-family:'Playfair Display','Lora',serif;
+    font-weight:800; font-size:40px; color:var(--ink); margin-bottom:16px; }
+  .scorers{ display:flex; gap:18px; margin:10px 0 6px; }
+  .scorers .col{ flex:1; }
+  .scorers .col h6{ margin:0 0 8px; font-size:13px; font-weight:800; letter-spacing:.3px; color:var(--ink); font-family:'Playfair Display','Lora',serif; }
+  .scorers .goal{ display:flex; gap:10px; font-size:14px; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
+  .scorers .goal .min{ font-weight:700; width:26px; }
+  .byline{ text-align:right; color:var(--red); font-weight:800; font-size:11px; margin-top:8mm; }
+  /* ===== PAGE 2 : STATS COLLECTIVES ===== */
+  .stat-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
+  .stat-table td{ padding:4px 2px; border-bottom:1px solid #E2DECF; }
+  .stat-table td.va{ width:64px; text-align:right; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:15px; color:var(--team-a); }
+  .stat-table td.vb{ width:64px; text-align:left; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:15px; color:var(--team-b); }
+  .stat-table td.lb{ text-align:center; font-size:11px; color:var(--ink); font-weight:600; }
+  .stat-table tr.grp td{ padding-top:7px; padding-bottom:1px; font-weight:800; font-size:10px; color:var(--gray); text-transform:uppercase; border-bottom:none; text-align:center; letter-spacing:.4px; }
+
+  /* ===== PAGES JOUEURS (1 par équipe) ===== */
+  .headline{ padding:16px 18px; color:#fff; margin-bottom:16px; }
+  .headline.a{ background:var(--team-a); } .headline.b{ background:var(--team-b); }
+  .headline .nm{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:24px; }
+  .headline .st{ font-size:12.5px; font-weight:600; margin-top:4px; opacity:.92; }
+
+  table.pl2{ width:100%; border-collapse:collapse; font-size:11.5px; flex:1; }
+  table.pl2 th{ font-weight:800; color:var(--gray); font-size:9px; text-transform:uppercase; letter-spacing:.2px; text-align:center; padding:4px 2px; }
+  table.pl2 thead tr:first-child th{ border-bottom:1px solid #D9D5CA; padding-bottom:3px; }
+  table.pl2 thead tr:last-child th{ border-bottom:2px solid var(--ink); padding-bottom:6px; }
+  table.pl2 th:first-child, table.pl2 td:first-child{ text-align:left; }
+  table.pl2 td{ text-align:center; padding:7px 2px; font-variant-numeric:tabular-nums; }
+  table.pl2 td:first-child{ font-weight:700; font-size:12px; }
+  table.pl2 tbody tr:nth-child(odd){ background:#EAE6D9; }
+  table.pl2 td.duel{ width:74px; }
+  .duelbar{ display:flex; height:13px; border-radius:2px; overflow:hidden; background:#D9D5CA; margin-bottom:2px; }
+  .duelbar .win{ background:var(--ink); }
+  .duelbar .lose{ background:#C7C2B3; }
+  .duelbar.b .win{ background:var(--team-b); }
+  .duel-txt{ font-size:9px; color:var(--gray); }
+
+  /* ===== PAGE 6 : ORIGINES DES BUTS ===== */
+  .goals-cols{ display:table; width:100%; table-layout:fixed; border-spacing:0; margin-top:14px; }
+  .goals-col{ display:table-cell; vertical-align:top; width:50%; }
+  .goals-col.a{ padding-right:5mm; }
+  .goals-col.b{ padding-left:5mm; }
+  .goals-col h6{ font-size:12px; font-weight:800; margin:0 0 8px; padding-bottom:6px; border-bottom:3px solid; }
+  .goals-col.a h6{ color:var(--team-a); border-color:var(--team-a); }
+  .goals-col.b h6{ color:var(--team-b); border-color:var(--team-b); }
+  .goal-card{ border:1.5px solid var(--ink); border-radius:6px; padding:6px 10px; margin-bottom:6px; }
+  .goal-card .row{ font-size:12.5px; }
+  .goal-card .row b{ font-family:'Playfair Display','Lora',serif; font-size:14px; }
+  .goal-card .origine{ font-size:10px; color:var(--gray); margin-top:1px; text-transform:capitalize; }
+
+  /* ===== PAGE 5 : GARDIENS ===== */
+  .gk-split{ display:table; width:100%; table-layout:fixed; }
+  .gk-side{ display:table-cell; vertical-align:top; width:50%; }
+  .gk-side.a{ padding-right:5mm; } .gk-side.b{ padding-left:5mm; }
+  .gk-side h6{ font-family:'Playfair Display','Lora',serif; font-size:28px; font-weight:800; margin:0 0 10px;
+    padding-bottom:8px; border-bottom:2px solid var(--ink); color:var(--ink); }
+  .gk-box2{ border:2px solid var(--ink); border-radius:16px; padding:12px 16px; margin-bottom:12px; }
+  .gk-box2 .nm{ font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:16px; margin-bottom:8px; }
+  .gk-box2 .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; }
+  .gk-box2 .grid2 div{ font-size:12px; display:flex; justify-content:space-between; }
+  .gk-box2 .grid2 b{ font-size:13px; }
+  .gk-box2 .relances{ margin-top:8px; padding-top:8px; border-top:1px dashed #C9C4B4; font-size:11px;
+    color:var(--ink); text-align:center; }
+  .gk-box2 .relances .lab{ font-weight:700; display:block; margin-bottom:2px; }
+
+  /* ===== PAGE 6 : PROCHAINEMENT ===== */
+  .futsal-tile{ background:var(--red); color:#fff; border:2px solid var(--ink); border-radius:6px;
+    padding:20px 24px; text-align:center; margin:16px 0 28px; }
+  .futsal-tile .t{ font-weight:800; font-size:22px; margin-bottom:8px; }
+  .futsal-tile .d{ font-size:15px; line-height:1.4; }
+  .next-title{ font-family:'Playfair Display','Lora',serif; font-weight:800; text-align:center; line-height:1.3; }
+  .next-title .lab{ font-size:20px; display:block; }
+  .next-jn{ font-size:26px; display:block; margin:4px 0; }
+  .next-teams{ font-size:32px; display:block; }
+  .next-logos{ display:flex; justify-content:center; gap:40px; margin-top:20px; }
+
+  @media print{
+    body{ background:none; padding:0; gap:0; }
+    .card{ box-shadow:none; page-break-after:always; margin:0 auto; }
+    .card:last-child{ page-break-after:auto; }
+  }
+  @page{ size:200mm 200mm; margin:0; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 : COVER -->
+<div class="card">
+  <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - D1 FUTSAL</div>
+  <hr class="rule">
+  <div class="logos-row">
+    <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% else %}LOGO<br>{{ team_a }}{% endif %}</div>
+    <div class="score-hero"><div class="digits">{{ score_a }} <span style="color:var(--red);">—</span> {{ score_b }}</div></div>
+    <div class="logo-slot">{% if logo_b %}<img src="{{ logo_b }}">{% else %}LOGO<br>{{ team_b }}{% endif %}</div>
+  </div>
+  <div class="teams-row"><span>{{ team_a }}</span><span>{{ team_b }}</span></div>
+  <div class="scorers">
+    <div class="col a">
+      <h6>BUTEURS {{ team_a }}</h6>
+      {% for g in buteurs_a %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
+      {% endfor %}
+    </div>
+    <div class="col b">
+      <h6>BUTEURS {{ team_b }}</h6>
+      {% for g in buteurs_b %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="byline">fait par Victor GEOFFROY</div>
+  <div class="footer"><span class="cap">Un match de futsal raconté par la donnée</span><span class="pg">01</span></div>
+</div>
+
+<!-- PAGE 2 : STATS COLLECTIVES -->
+<div class="card">
+  <div class="kicker">STATISTIQUES COLLECTIVES</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:26px; margin-bottom:4px;">Le match, chiffre par chiffre</h1>
+  <table class="stat-table">
+    {% for group in stat_groups %}
+    <tr class="grp"><td colspan="3">{{ group.label }}</td></tr>
+    {% for row in group.rows %}
+    <tr><td class="va">{{ row.a }}</td><td class="lb">{{ row.label }}</td><td class="vb">{{ row.b }}</td></tr>
+    {% endfor %}
+    {% endfor %}
+  </table>
+  <div class="footer"><span class="cap">Toutes les stats collectives</span><span class="pg">02</span></div>
+</div>
+
+<!-- PAGE 3 : JOUEURS ÉQUIPE A -->
+<div class="card">
+  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:30px;">La feuille de stats de {{ team_a }}</h1>
+  <table class="pl2">
+    <thead>
+      <tr><th></th><th colspan="3">Tirs</th><th colspan="2">Duels</th><th colspan="4">Ballon</th><th>Discipline</th></tr>
+      <tr><th>Joueurs</th><th>To.</th><th>Cad.</th><th>But</th><th>Off</th><th>Def</th><th>Perte</th><th>Récup</th><th>Inter</th><th>P.Loupé</th><th>F. Sub. / Com.</th></tr>
+    </thead>
+    <tbody>
+      {% for p in joueurs_a %}
+      <tr><td>{{ p.nom }}</td><td>{{ p.tirs }}</td><td>{{ p.tirs_cadres }}</td><td>{{ p.buts }}</td>
+        <td>{{ p.duel_off_gagne }}/{{ p.duel_off_total }}</td><td>{{ p.duel_def_gagne }}/{{ p.duel_def_total }}</td>
+        <td>{{ p.perte_balle }}</td><td>{{ p.recuperation }}</td><td>{{ p.interception }}</td><td>{{ p.passe_loupee }}</td><td>{{ p.faute_subie }} / {{ p.faute_commise }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="footer"><span class="cap">{{ joueurs_a|length }} joueurs de champs + {{ gardiens_a|length }} gardiens (voir page gardiens)</span><span class="pg">03</span></div>
+</div>
+
+<!-- PAGE 4 : JOUEURS ÉQUIPE B -->
+<div class="card">
+  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:30px;">La feuille de stats de {{ team_b }}</h1>
+  <table class="pl2">
+    <thead>
+      <tr><th></th><th colspan="3">Tirs</th><th colspan="2">Duels</th><th colspan="4">Ballon</th><th>Discipline</th></tr>
+      <tr><th>Joueurs</th><th>To.</th><th>Cad.</th><th>But</th><th>Off</th><th>Def</th><th>Perte</th><th>Récup</th><th>Inter</th><th>P.Loupé</th><th>F. Sub. / Com.</th></tr>
+    </thead>
+    <tbody>
+      {% for p in joueurs_b %}
+      <tr><td>{{ p.nom }}</td><td>{{ p.tirs }}</td><td>{{ p.tirs_cadres }}</td><td>{{ p.buts }}</td>
+        <td>{{ p.duel_off_gagne }}/{{ p.duel_off_total }}</td><td>{{ p.duel_def_gagne }}/{{ p.duel_def_total }}</td>
+        <td>{{ p.perte_balle }}</td><td>{{ p.recuperation }}</td><td>{{ p.interception }}</td><td>{{ p.passe_loupee }}</td><td>{{ p.faute_subie }} / {{ p.faute_commise }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="footer"><span class="cap">{{ joueurs_b|length }} joueurs de champs + {{ gardiens_b|length }} gardiens (voir page gardiens)</span><span class="pg">04</span></div>
+</div>
+<!-- PAGE 5 : GARDIENS -->
+<div class="card">
+  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:32px;">Les gardiens<br>au révélateur</h1>
+  <div class="gk-split" style="margin-top:14px;">
+    <div class="gk-side a">
+      <h6>{{ team_a }}</h6>
+      {% for gk in gardiens_a %}
+      <div class="gk-box2">
+        <div class="nm">{{ gk.nom }}</div>
+        <div class="grid2">
+          <div>Arrêts <b>{{ gk.arrets }}</b></div><div>Tirs subis <b>{{ gk.tirs_cadres_subis }}</b></div>
+          <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
+        </div>
+        <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="gk-side b">
+      <h6>{{ team_b }}</h6>
+      {% for gk in gardiens_b %}
+      <div class="gk-box2">
+        <div class="nm">{{ gk.nom }}</div>
+        <div class="grid2">
+          <div>Arrêts <b>{{ gk.arrets }}</b></div><div>Tirs subis <b>{{ gk.tirs_cadres_subis }}</b></div>
+          <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
+        </div>
+        <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+      </div>
+      {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span class="cap">Les gardiens</span><span class="pg">05</span></div>
+</div>
+
+<!-- PAGE 6 : PROCHAINEMENT -->
+<div class="card">
+  <div class="kicker">PROCHAINEMENT...</div>
+  <hr class="rule">
+  <div class="futsal-tile">
+    <div class="t">FUTSAL</div>
+    <div class="d">Ce sport mérite plus de données,<br>plus de lecture, plus de traces.</div>
+  </div>
+  <div class="next-title">
+    <span class="lab">PROCHAINE JOURNÉE</span>
+    <span class="next-jn">{{ prochaine_journee_numero }}</span>
+    <span class="next-teams">{{ prochaine_journee_affiche }}</span>
+  </div>
+  <div class="next-logos">
+    <div class="logo-slot">{% if prochain_logo_a %}<img src="{{ prochain_logo_a }}">{% else %}LOGO{% endif %}</div>
+    <div class="logo-slot">{% if prochain_logo_b %}<img src="{{ prochain_logo_b }}">{% else %}LOGO{% endif %}</div>
+  </div>
+  <div class="footer"><span class="cap">La suite au prochain épisode</span><span class="pg">06</span></div>
+</div>
+
+</body>
+</html>
