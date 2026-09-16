@@ -38,9 +38,21 @@ def load_compo(path):
             if nom is None:
                 continue
             gardien = str(row[1].value).strip().upper() == "OUI"
-            numero = row[2].value
+            numero_brut = row[2].value
+            if numero_brut is None or str(numero_brut).strip() == "":
+                raise CompoError(
+                    f"Compo '{team}' : le joueur '{nom}' n'a pas de numéro renseigné (colonne Numéro vide, "
+                    f"ligne {row[0].row}). Complète-la avant de régénérer le rapport."
+                )
+            try:
+                numero = int(numero_brut)
+            except (TypeError, ValueError):
+                raise CompoError(
+                    f"Compo '{team}' : le numéro du joueur '{nom}' n'est pas un nombre valide "
+                    f"('{numero_brut}', ligne {row[0].row})."
+                )
             alias = str(row[alias_col].value).strip().upper() if alias_col is not None and row[alias_col].value else None
-            players.append({"nom": str(nom).strip().upper(), "numero": int(numero), "gardien": gardien, "alias": alias})
+            players.append({"nom": str(nom).strip().upper(), "numero": numero, "gardien": gardien, "alias": alias})
         compo[team] = players
     return compo
 
@@ -100,11 +112,11 @@ class CompoError(Exception):
 
 def validate_compo_vs_raw(header, compo):
     """
-    Contrôle bidirectionnel avant tout calcul :
-    - un joueur de la compo introuvable dans la feuille brute (faute de frappe, mauvais numéro, mauvaise équipe)
-    - une colonne joueur de la feuille brute absente de la compo (joueur non déclaré, comme DUQUE précédemment)
-    Les deux cas sont bloquants : un joueur non reconnu = ses stats disparaissent silencieusement des totaux,
-    donc on préfère arrêter net avec un message clair plutôt que sortir un rapport de match faux.
+    Contrôle un seul sens : une colonne joueur de la feuille brute (donc quelqu'un qui a vraiment
+    joué/tagué) doit être reconnue dans la compo, sinon ses stats disparaîtraient silencieusement
+    des totaux (cas DUQUE). L'inverse (un joueur de la compo absent de la feuille brute) est normal :
+    la compo est l'effectif du club, pas la feuille de match — un remplaçant qui n'a pas joué n'a
+    simplement aucune colonne, ce n'est pas une erreur.
     """
     header_re = re.compile(r"^\s*(\d+)\.\s*(.+?)\s*$")
     raw_players = {}  # (numero, nom) -> libellé brut d'origine
@@ -116,16 +128,10 @@ def validate_compo_vs_raw(header, compo):
             raw_players[(int(m.group(1)), m.group(2).strip().upper())] = h
 
     compo_keys = {(p["numero"], p["nom"]): (team, p["nom"]) for team, players in compo.items() for p in players}
-
-    compo_absents = [key for key in compo_keys if key not in raw_players]
     raw_absents = [(key, label) for key, label in raw_players.items() if key not in compo_keys]
 
-    if compo_absents or raw_absents:
-        msg = ["Compo / feuille brute incohérentes :"]
-        for numero, nom in compo_absents:
-            team = compo_keys[(numero, nom)][0]
-            msg.append(f"  - Compo dit '{numero}. {nom}' ({team}) mais aucune colonne correspondante"
-                       f" dans la feuille brute (orthographe ou numéro à vérifier).")
+    if raw_absents:
+        msg = ["Joueur(s) tagué(s) dans la feuille brute mais absent(s) de la compo :"]
         for (numero, nom), label in raw_absents:
             msg.append(f"  - La feuille brute contient la colonne '{label}' mais ce joueur"
                        f" n'est dans aucune des feuilles de la compo (joueur à ajouter).")
@@ -160,6 +166,24 @@ def match_scorer_name(full_name, compo_players):
     return matches[0] if len(matches) == 1 else None
 
 
+def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
+    """Repli : si l'origine est vide dans l'onglet maître, on va la chercher dans l'onglet de
+    l'équipe qui a marqué (parfois renseignée là seulement, comme observé sur la saison en cours)."""
+    if team_short not in wb.sheetnames:
+        return None
+    ws = wb[team_short]
+    header = [c.value for c in ws[1]]
+    col = {h: i for i, h in enumerate(header) if h}
+    needed = {"journee", "minute", "joueur", "origine_but"}
+    if not needed.issubset(col):
+        return None
+    for r in range(2, ws.max_row + 1):
+        row = [ws.cell(row=r, column=c + 1).value for c in range(len(header))]
+        if row[col["journee"]] == journee and row[col["minute"]] == minute and row[col["joueur"]] == scorer_full:
+            return (row[col["origine_but"]] or "").strip()
+    return None
+
+
 def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
     """Filtre l'onglet maître 'BUT D1' par journée + les 2 équipes (noms courts de la compo),
     rattache chaque buteur à un nom de la compo, et retourne (buteurs_a, buteurs_b) triés par minute."""
@@ -189,8 +213,10 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         marque = row[col["equipe_marque"]]
         scorer_full = row[col["joueur"]]
         minute = row[col["minute"]]
-        origine = (row[col["origine_but"]] or "").strip()
+        origine = ((row[col["origine_but"]] or "") if "origine_but" in col else "").strip()
         team_short = team_a if marque == off_a else team_b
+        if not origine:
+            origine = _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full) or ""
         candidates = players_a if team_short == team_a else players_b
         matched = match_scorer_name(scorer_full, candidates)
         entry = {"minute": f"{minute}'", "joueur": matched or f"?? ({scorer_full})", "origine": origine}
