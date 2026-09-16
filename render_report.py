@@ -8,7 +8,7 @@ et les minutes des buteurs (en attendant le fichier "buts saison en cours" évoq
 """
 import jinja2
 from weasyprint import HTML
-from parse_match import compute, load_compo, load_goals_for_match, GoalsDbError
+from parse_match import compute, load_compo, load_goals_for_match, get_home_away, GoalsDbError
 
 TEMPLATE_PATH = "report_template.html.j2"
 
@@ -64,6 +64,11 @@ def build_stat_groups(team_stats, team_a, team_b):
     def pair(label, ka1, ka2, kb1, kb2):
         return {"label": label, "a": f"{a[ka1]} / {a[ka2]}", "b": f"{b[kb1]} / {b[kb2]}"}
 
+    def attaque(team):
+        return (team["touche_off"] + team["touche_def"] + team["transition_off"]
+                + team["coup_franc"] + team["corner"] + team["attaque_placee"]
+                + team["penalty"] + team["jet_franc"])
+
     def duels_combines(team):
         gagne = team["duel_off_gagne"] + team["duel_def_gagne"]
         total = gagne + team["duel_off_perdu"] + team["duel_def_perdu"]
@@ -82,7 +87,7 @@ def build_stat_groups(team_stats, team_a, team_b):
         {"label": "Discipline / phase", "rows": [
             pair("FAUTE SUBIE / COMMISE", "faute_subie", "faute_commise", "faute_subie", "faute_commise"),
             row("COUP FRANC", "coup_franc"),
-            row("ATTAQUE PLACEE", "attaque_placee"),
+            {"label": "ATTAQUE", "a": attaque(a), "b": attaque(b)},
             row("TRANSITION OFF", "transition_off"),
             row("CORNER", "corner"),
         ]},
@@ -100,6 +105,8 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     player_stats, team_stats, gv, pp = compute(raw_path, compo_path)
     teams = list(team_stats.keys())
     team_a, team_b = teams[0], teams[1]
+    if goals_db_path and journee_num is not None:
+        team_a, team_b = get_home_away(goals_db_path, team_a, team_b, journee_num)
 
     if goals_db_path and journee_num is not None:
         compo_full = load_compo(compo_path)

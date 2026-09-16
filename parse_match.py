@@ -184,6 +184,31 @@ def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
     return None
 
 
+def get_home_away(goals_db_path, team_a, team_b, journee):
+    """Détermine qui est domicile/extérieur pour CE match via l'onglet maître de la base buteurs
+    (colonnes equipe_domicile/equipe_exterieure). Repli sur (team_a, team_b) tel quel si le match
+    n'y est pas trouvé (base pas encore à jour, etc.)."""
+    off_a, off_b = TEAM_NAME_MAP.get(team_a), TEAM_NAME_MAP.get(team_b)
+    if off_a is None or off_b is None:
+        return team_a, team_b
+    wb = openpyxl.load_workbook(goals_db_path, data_only=True)
+    sheet_name = next((s for s in wb.sheetnames if s.strip().upper().startswith("BUT D1")), None)
+    if sheet_name is None:
+        return team_a, team_b
+    ws = wb[sheet_name]
+    header = [c.value for c in ws[1]]
+    col = {h: i for i, h in enumerate(header) if h}
+    if not {"journee", "equipe_domicile", "equipe_exterieure"}.issubset(col):
+        return team_a, team_b
+    for r in range(2, ws.max_row + 1):
+        dom = ws.cell(row=r, column=col["equipe_domicile"] + 1).value
+        ext = ws.cell(row=r, column=col["equipe_exterieure"] + 1).value
+        jr = ws.cell(row=r, column=col["journee"] + 1).value
+        if jr == journee and {dom, ext} == {off_a, off_b}:
+            return (team_a, team_b) if dom == off_a else (team_b, team_a)
+    return team_a, team_b
+
+
 def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
     """Filtre l'onglet maître 'BUT D1' par journée + les 2 équipes (noms courts de la compo),
     rattache chaque buteur à un nom de la compo, et retourne (buteurs_a, buteurs_b) triés par minute."""
@@ -372,6 +397,8 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
             "touche_off": get_total(row_index, "Touche OFF", team),
             "touche_def": get_total(row_index, "Touche DEF", team),
             "corner": get_total(row_index, "Corner", team),
+            "penalty": get_total(row_index, "Penalty", team),
+            "jet_franc": get_total(row_index, "Jet Franc", team),
             "coup_franc": get_total(row_index, "Coup Franc", team),
         }
 
