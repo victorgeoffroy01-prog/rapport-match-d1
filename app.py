@@ -20,13 +20,12 @@ with col2:
 with col3:
     goals_file = st.file_uploader("Base des buteurs", type=["xlsx"])
 
-c1, c2, c3 = st.columns(3)
+c1, c2 = st.columns(2)
 with c1:
-    saison = st.text_input("Saison (affichage)", value="Saison 2025 / 2026")
+    saison = st.text_input("Saison (affichage)", value="Saison 2026 / 2027")
 with c2:
-    journee_label = st.text_input("Journée (affichage)", value="Journée 1")
-with c3:
-    journee_num = st.number_input("Journée (numéro, pour filtrer la base buteurs)", min_value=1, step=1, value=1)
+    journee_num = st.number_input("Journée", min_value=1, step=1, value=1)
+journee_label = f"Journée {int(journee_num)}"
 
 generer = st.button("Générer le rapport", type="primary", disabled=not (raw_file and compo_file and goals_file))
 
