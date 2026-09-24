@@ -146,11 +146,18 @@ class GoalsDbError(Exception):
 
 # Mapping nom court (compo / feuille de tag) -> nom officiel complet (base buteurs)
 TEAM_NAME_MAP = {
-    "GOAL": "GOAL FUTSAL CLUB", "NANTES": "NANTES METROPOLE F.", "NMF": "NANTES METROPOLE F.",
-    "ACASA": "PARIS ACASA",
-    "LAVAL": "ETOILE LAVALLOISE FC", "MTP": "MONTPELLIER MED. F.", "SPORTING": "SPORTING CLUB PARIS",
-    "AVION": "AS AVION FUTSAL", "KINGERSHEIM": "FC KINGERSHEIM", "NICE": "NICE FUTSAL CLUB",
-    "TOULON": "TOULON METROPOLE F.", "TOULOUSE": "UJS TOULOUSE",
+    "GOAL": "GOAL FUTSAL CLUB",
+    "NANTES": "NANTES METROPOLE F.", "NMF": "NANTES METROPOLE F.",
+    "ACASA": "PARIS ACASA", "PARIS ACASA": "PARIS ACASA",
+    "LAVAL": "ETOILE LAVALLOISE FC",
+    "MTP": "MONTPELLIER MED. F.",
+    "SPORTING": "SPORTING CLUB PARIS", "SPORTING PARIS": "SPORTING CLUB PARIS",
+    "AVION": "AS AVION FUTSAL",
+    "NICE": "NICE FUTSAL CLUB",
+    "TOULON": "TOULON METROPOLE F.",
+    "TOULOUSE": "UJS TOULOUSE", "UJS": "UJS TOULOUSE",
+    "ARTISTE": "ARTISTES FUTSAL", "ARTISTES": "ARTISTES FUTSAL",
+    "GARGES": "GARGES",  # nom officiel pas encore confirmé (pas encore de but dans la base) — à corriger dès qu'on le voit
 }
 
 
