@@ -381,7 +381,10 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
             # pas la ligne de sa propre équipe (qui donnerait ses propres tirs/buts marqués).
             tir_cadre_subi = get_val(row_index, "Tir Cadré", opp, idx)
             but_subi = get_val(row_index, "But", opp, idx)
-            stats["arrets"] = tir_cadre_subi - but_subi
+            # garde-fou : jamais d'arrêts négatifs affichés si le tag "Tir Cadré" manque sur un but précis
+            # dans la feuille source (le but reste compté, mais on ne comble pas le tir manquant :
+            # tirs_cadres_subis reste fidèle au tag réel, cohérent avec le total collectif)
+            stats["arrets"] = max(0, tir_cadre_subi - but_subi)
             stats["tirs_cadres_subis"] = tir_cadre_subi
             stats["buts_subis"] = but_subi
             stats["relance_facile"] = get_val(row_index, "Relance Facile Réussi", team, idx)
