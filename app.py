@@ -54,8 +54,10 @@ if generer:
             with open(output_pdf, "rb") as f:
                 pdf_bytes = f.read()
             st.success("Rapport généré.")
+            raw_stem = os.path.splitext(raw_file.name)[0]
+            pdf_name = f"Rapport_match_{raw_stem}.pdf"
             st.download_button("Télécharger le PDF", data=pdf_bytes,
-                                file_name="rapport_de_match.pdf", mime="application/pdf")
+                                file_name=pdf_name, mime="application/pdf")
         except CompoError as e:
             st.error("Incohérence compo / feuille brute :\n\n" + str(e))
         except GoalsDbError as e:
