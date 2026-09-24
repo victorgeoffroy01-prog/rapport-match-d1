@@ -45,11 +45,17 @@ def build_gk_rows(player_stats, team):
         if not s["gardien"] or s["equipe"] != team:
             continue
         pct = round(s["arrets"] / s["tirs_cadres_subis"] * 100) if s["tirs_cadres_subis"] else 0
+        duel_gagne = s["duel_off_gagne"] + s["duel_def_gagne"]
+        duel_total = duel_gagne + s["duel_off_perdu"] + s["duel_def_perdu"]
         rows.append({
             "nom": nom, "arrets": s["arrets"], "tirs_cadres_subis": s["tirs_cadres_subis"],
             "buts_subis": s["buts_subis"], "pct_arrets": pct,
             "relance_facile": s["relance_facile"], "relance_diff_ok": s["relance_diff_ok"],
             "relance_diff_ko": s["relance_diff_ko"],
+            "tirs": s["tirs"], "duel_gagne": duel_gagne, "duel_total": duel_total,
+            "faute_subie": s["faute_subie"], "faute_commise": s["faute_commise"],
+            "perte_balle": s["perte_balle"], "recuperation": s["recuperation"],
+            "interception": s["interception"], "passe_loupee": s["passe_loupee"],
         })
     return rows
 

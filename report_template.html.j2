@@ -100,14 +100,20 @@
   .gk-side.a{ padding-right:5mm; } .gk-side.b{ padding-left:5mm; }
   .gk-side h6{ font-family:'Playfair Display','Lora',serif; font-size:28px; font-weight:800; margin:0 0 10px;
     padding-bottom:8px; border-bottom:2px solid var(--ink); color:var(--ink); }
-  .gk-box2{ border:2px solid var(--ink); border-radius:16px; padding:12px 16px; margin-bottom:12px; }
-  .gk-box2 .nm{ font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:16px; margin-bottom:8px; }
-  .gk-box2 .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; }
-  .gk-box2 .grid2 div{ font-size:12px; display:flex; justify-content:space-between; }
-  .gk-box2 .grid2 b{ font-size:13px; }
-  .gk-box2 .relances{ margin-top:8px; padding-top:8px; border-top:1px dashed #C9C4B4; font-size:11px;
-    color:var(--ink); text-align:center; }
-  .gk-box2 .relances .lab{ font-weight:700; display:block; margin-bottom:2px; }
+  .gk-box2{ border:2px solid var(--ink); border-radius:14px; padding:9px 13px; margin-bottom:8px; }
+  .gk-box2 .nm{ font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:14px; margin-bottom:5px; }
+  .gk-box2 .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; }
+  .gk-box2 .grid2 div{ font-size:11px; display:flex; justify-content:space-between; }
+  .gk-box2 .grid2 b{ font-size:12.5px; }
+  .gk-box2 .relances{ margin-top:6px; padding-top:6px; border-top:1px dashed #C9C4B4; font-size:10px;
+    color:var(--ink); text-align:center; line-height:1.3; }
+  .gk-box2 .relances .lab{ font-weight:700; display:block; margin-bottom:1px; }
+  .gk-box2 .relances.hors-cage{ margin-top:6px; padding-top:6px; }
+  .gk-box2 .hc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; margin-top:6px; padding-top:6px;
+    border-top:1px dashed #C9C4B4; }
+  .gk-box2 .hc-grid .hc-lab{ font-weight:700; font-size:10px; grid-column:1/3; text-align:center; margin-bottom:1px; }
+  .gk-box2 .hc-grid div:not(.hc-lab){ font-size:9.5px; display:flex; justify-content:space-between; }
+  .gk-box2 .hc-grid b{ font-size:10.5px; }
 
   /* ===== PAGE 6 : PROCHAINEMENT ===== */
   .futsal-tile{ background:var(--red); color:#fff; border:2px solid var(--ink); border-radius:6px;
@@ -229,6 +235,13 @@
           <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
         </div>
         <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+        <div class="hc-grid">
+          <div class="hc-lab">Hors cage</div>
+          <div>Tirs <b>{{ gk.tirs }}</b></div><div>Duels <b>{{ gk.duel_gagne }}/{{ gk.duel_total }}</b></div>
+          <div>Perte <b>{{ gk.perte_balle }}</b></div><div>Récup <b>{{ gk.recuperation }}</b></div>
+          <div>Inter <b>{{ gk.interception }}</b></div><div>P.Loupé <b>{{ gk.passe_loupee }}</b></div>
+          <div>Faute S/C <b>{{ gk.faute_subie }}/{{ gk.faute_commise }}</b></div>
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -242,6 +255,13 @@
           <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
         </div>
         <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+        <div class="hc-grid">
+          <div class="hc-lab">Hors cage</div>
+          <div>Tirs <b>{{ gk.tirs }}</b></div><div>Duels <b>{{ gk.duel_gagne }}/{{ gk.duel_total }}</b></div>
+          <div>Perte <b>{{ gk.perte_balle }}</b></div><div>Récup <b>{{ gk.recuperation }}</b></div>
+          <div>Inter <b>{{ gk.interception }}</b></div><div>P.Loupé <b>{{ gk.passe_loupee }}</b></div>
+          <div>Faute S/C <b>{{ gk.faute_subie }}/{{ gk.faute_commise }}</b></div>
+        </div>
       </div>
       {% endfor %}
       </div>
