@@ -9,6 +9,7 @@ et les minutes des buteurs (en attendant le fichier "buts saison en cours" évoq
 import jinja2
 from weasyprint import HTML
 from parse_match import compute, load_compo, load_goals_for_match, get_home_away, GoalsDbError
+from controles import controler
 
 TEMPLATE_PATH = "report_template.html.j2"
 
@@ -52,7 +53,8 @@ def build_gk_rows(player_stats, team):
             "buts_subis": s["buts_subis"], "pct_arrets": pct,
             "relance_facile": s["relance_facile"], "relance_diff_ok": s["relance_diff_ok"],
             "relance_diff_ko": s["relance_diff_ko"],
-            "tirs": s["tirs"], "duel_gagne": duel_gagne, "duel_total": duel_total,
+            "tirs": s["tirs"], "tirs_cadres": s["tirs_cadres"], "buts": s["buts"],
+            "duel_gagne": duel_gagne, "duel_total": duel_total,
             "faute_subie": s["faute_subie"], "faute_commise": s["faute_commise"],
             "perte_balle": s["perte_balle"], "recuperation": s["recuperation"],
             "interception": s["interception"], "passe_loupee": s["passe_loupee"],
@@ -149,7 +151,11 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         f.write(html_out)
 
     HTML(string=html_out, base_url=".").write_pdf(output_pdf)
-    return output_pdf
+
+    alertes = controler(context)
+    for a in alertes:
+        print("⚠", a)
+    return output_pdf, alertes
 
 
 if __name__ == "__main__":
@@ -159,8 +165,10 @@ if __name__ == "__main__":
         "prochaine_journee_affiche": "MONTPELLIER - TOULON",
     }
     try:
-        out = render("LAVAL_-_NICE.xlsx", "Compo_D1_.xlsx", match_info, "Rapport_LAVAL_NICE.pdf",
+        out, alertes = render("LAVAL_-_NICE.xlsx", "Compo_D1_.xlsx", match_info, "Rapport_LAVAL_NICE.pdf",
                      goals_db_path="But_D1_26_27.xlsx", journee_num=1)
         print("PDF généré :", out)
+        if not alertes:
+            print("Aucune incohérence détectée.")
     except GoalsDbError as e:
         print("ERREUR base buteurs :", e)

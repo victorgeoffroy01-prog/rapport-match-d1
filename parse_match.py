@@ -341,6 +341,8 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
         tir_hc = get_val(row_index, "Tir HC", team, idx)
         tir_contre = get_val(row_index, "Tir Contré", team, idx)
         buts = get_val(row_index, "But", team, idx)
+        # même garde-fou que pour les gardiens : un but est toujours un tir cadré
+        tir_cadre = max(tir_cadre, buts)
 
         duel_off_g = get_val(row_index, "Duel Gagné OFF", team, idx)
         duel_off_p = get_val(row_index, "Duel Perdu OFF", team, idx)
