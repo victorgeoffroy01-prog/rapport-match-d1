@@ -361,6 +361,7 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
 
         passe_decisive = get_val(row_index, "Passe Désicive", team, idx)
         poteau = get_val(row_index, "Poteau", team, idx)
+        tir_hc = tir_hc + poteau  # un poteau est un tir non cadré (non arrêté par le gardien)
 
         faute_subie = get_val(row_index, "Faute Subie", team, idx)
         faute_commise = get_val(row_index, "Faute Subie", opp, idx)

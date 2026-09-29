@@ -126,6 +126,14 @@
   .next-teams{ font-size:32px; display:block; }
   .next-logos{ display:flex; justify-content:center; gap:40px; margin-top:20px; }
 
+  /* ===== FICHE DÉFINITIONS ===== */
+  .def-group{ font-weight:800; font-size:11px; color:var(--gray); text-transform:uppercase;
+    letter-spacing:.4px; margin:12px 0 4px; }
+  .def-group:first-child{ margin-top:0; }
+  .def-row{ font-size:11px; padding:4px 0; border-bottom:1px solid #E2DECF; line-height:1.35; }
+  .def-row b{ font-weight:800; }
+  .def-page{ font-size:11px; color:var(--gray); }
+
   @media print{
     body{ background:none; padding:0; gap:0; }
     .card{ box-shadow:none; page-break-after:always; margin:0 auto; }
@@ -135,6 +143,8 @@
 </style>
 </head>
 <body>
+{%- macro pl(n, sing, plur) -%}{{ n }} {{ sing if (n|int) <= 1 else plur }}{%- endmacro -%}
+
 
 <!-- PAGE 1 : COVER -->
 <div class="card">
@@ -180,7 +190,7 @@
 
 <!-- PAGE 3 : JOUEURS ÉQUIPE A -->
 <div class="card">
-  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <div class="kicker">STATISTIQUES INDIVIDUELLES</div>
   <hr class="rule">
   <h1 class="title" style="font-size:30px;">La feuille de stats de {{ team_a }}</h1>
   <table class="pl2">
@@ -196,12 +206,12 @@
       {% endfor %}
     </tbody>
   </table>
-  <div class="footer"><span class="cap">{{ joueurs_a|length }} joueurs de champs + {{ gardiens_a|length }} gardiens (voir page gardiens)</span><span class="pg">03</span></div>
+  <div class="footer"><span class="cap">{{ pl(joueurs_a|length, 'joueur de champ', 'joueurs de champ') }} + {{ pl(gardiens_a|length, 'gardien', 'gardiens') }} (voir page gardiens)</span><span class="pg">03</span></div>
 </div>
 
 <!-- PAGE 4 : JOUEURS ÉQUIPE B -->
 <div class="card">
-  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <div class="kicker">STATISTIQUES INDIVIDUELLES</div>
   <hr class="rule">
   <h1 class="title" style="font-size:30px;">La feuille de stats de {{ team_b }}</h1>
   <table class="pl2">
@@ -217,11 +227,11 @@
       {% endfor %}
     </tbody>
   </table>
-  <div class="footer"><span class="cap">{{ joueurs_b|length }} joueurs de champs + {{ gardiens_b|length }} gardiens (voir page gardiens)</span><span class="pg">04</span></div>
+  <div class="footer"><span class="cap">{{ pl(joueurs_b|length, 'joueur de champ', 'joueurs de champ') }} + {{ pl(gardiens_b|length, 'gardien', 'gardiens') }} (voir page gardiens)</span><span class="pg">04</span></div>
 </div>
 <!-- PAGE 5 : GARDIENS -->
 <div class="card">
-  <div class="kicker">STATISTIQUE INDIVIDUELLES</div>
+  <div class="kicker">STATISTIQUES INDIVIDUELLES</div>
   <hr class="rule">
   <h1 class="title" style="font-size:32px;">Les gardiens<br>au révélateur</h1>
   <div class="gk-split" style="margin-top:14px;">
@@ -234,7 +244,7 @@
           <div>Arrêts <b>{{ gk.arrets }}</b></div><div>Tirs subis <b>{{ gk.tirs_cadres_subis }}</b></div>
           <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
         </div>
-        <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+        <div class="relances"><span class="lab">Relances</span>{{ pl(gk.relance_facile, 'facile', 'faciles') }} - {{ pl(gk.relance_diff_ok, 'difficile réussie', 'difficiles réussies') }}<br>{{ pl(gk.relance_diff_ko, 'difficile loupée', 'difficiles loupées') }}</div>
         <div class="hc-grid">
           <div class="hc-lab">Hors cage</div>
           <div>Tirs <b>{{ gk.tirs }}</b></div><div>Duels <b>{{ gk.duel_gagne }}/{{ gk.duel_total }}</b></div>
@@ -254,7 +264,7 @@
           <div>Arrêts <b>{{ gk.arrets }}</b></div><div>Tirs subis <b>{{ gk.tirs_cadres_subis }}</b></div>
           <div>Buts subis <b>{{ gk.buts_subis }}</b></div><div>% Arrêts <b>{{ gk.pct_arrets }}%</b></div>
         </div>
-        <div class="relances"><span class="lab">Relances</span>{{ gk.relance_facile }} faciles - {{ gk.relance_diff_ok }} difficiles réussies<br>{{ gk.relance_diff_ko }} difficiles loupés</div>
+        <div class="relances"><span class="lab">Relances</span>{{ pl(gk.relance_facile, 'facile', 'faciles') }} - {{ pl(gk.relance_diff_ok, 'difficile réussie', 'difficiles réussies') }}<br>{{ pl(gk.relance_diff_ko, 'difficile loupée', 'difficiles loupées') }}</div>
         <div class="hc-grid">
           <div class="hc-lab">Hors cage</div>
           <div>Tirs <b>{{ gk.tirs }}</b></div><div>Duels <b>{{ gk.duel_gagne }}/{{ gk.duel_total }}</b></div>
@@ -288,6 +298,95 @@
     <div class="logo-slot">{% if prochain_logo_b %}<img src="{{ prochain_logo_b }}">{% else %}LOGO{% endif %}</div>
   </div>
   <div class="footer"><span class="cap">La suite au prochain épisode</span><span class="pg">06</span></div>
+</div>
+
+<!-- PAGE 7 : FICHE DÉFINITIONS (1/4) -->
+<div class="card">
+  <div class="kicker">MÉTHODOLOGIE</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:26px;">Comment sont construites les stats</h1>
+
+  <div class="def-group">Tirs</div>
+  <div class="def-row"><b>Tirs totaux</b> = tirs cadrés + tirs hors cadre + tirs contrés</div>
+  <div class="def-row"><b>Tirs cadrés</b> = tirs dans le cadre arrêtés par le gardien + buts</div>
+  <div class="def-row"><b>Tirs hors cadre</b> = tirs n'étant pas cadrés, poteau inclus</div>
+  <div class="def-row"><b>Tirs contrés</b> = tirs contrés par un adversaire ou un coéquipier</div>
+  <div class="def-row"><b>Buts</b> = inclus directement dans les tirs cadrés, quand le ballon franchit la ligne de but</div>
+
+  <div class="def-group">Duels</div>
+  <div class="def-row"><b>Duel OFF gagné</b> = duels offensifs gagnés par le joueur</div>
+  <div class="def-row"><b>Duel OFF perdu</b> = duels offensifs perdus par le joueur</div>
+  <div class="def-row"><b>Duel OFF joué</b> = duel OFF gagné + duel OFF perdu</div>
+  <div class="def-row"><b>Duel DEF gagné</b> = duel OFF perdu par l'adversaire direct</div>
+  <div class="def-row"><b>Duel DEF perdu</b> = duel OFF gagné par l'adversaire direct</div>
+  <div class="def-row"><b>Duel DEF joué</b> = duel DEF gagné + duel DEF perdu</div>
+  <div class="def-row"><b>Duels (stat collective)</b> = (duel OFF gagné + duel DEF gagné) / (duel OFF joué + duel DEF joué)</div>
+
+  <div class="footer"><span class="cap def-page">Méthodologie 1/4</span><span class="pg">07</span></div>
+</div>
+
+<!-- PAGE 8 : FICHE DÉFINITIONS (2/4) -->
+<div class="card">
+  <div class="kicker">MÉTHODOLOGIE</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:26px;">Comment sont construites les stats</h1>
+
+  <div class="def-group">Ballon</div>
+  <div class="def-row"><b>Perte de balle</b> = perte de balle solo + ballon rendu + récupération adverse</div>
+  <div class="def-row"><b>Récupération</b> = ballon récupéré sur un adversaire</div>
+  <div class="def-row"><b>Interception</b> = passe adverse coupée par le joueur</div>
+  <div class="def-row"><b>Passe loupée</b> = passe loupée solo + interception adverse</div>
+  <div class="def-row"><b>Passe décisive</b> = passe amenant directement un but</div>
+
+  <div class="def-group">Discipline</div>
+  <div class="def-row"><b>Faute subie</b> = faute reçue par le joueur</div>
+  <div class="def-row"><b>Faute commise</b> = faute subie par l'adversaire direct</div>
+  <div class="def-row"><b>Coup franc</b> = nombre de coups francs obtenus par l'équipe</div>
+  <div class="def-row"><b>Poteau</b> = tir qui touche le poteau ou la barre, compté aussi dans les tirs hors cadre</div>
+
+  <div class="footer"><span class="cap def-page">Méthodologie 2/4</span><span class="pg">08</span></div>
+</div>
+
+<!-- PAGE 9 : FICHE DÉFINITIONS (3/4) -->
+<div class="card">
+  <div class="kicker">MÉTHODOLOGIE</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:26px;">Comment sont construites les stats</h1>
+
+  <div class="def-group">Phases de jeu</div>
+  <div class="def-row"><b>Attaque placée</b> = ATT 4-0 + ATT 1-2-1 + ATT générique</div>
+  <div class="def-row"><b>Défense</b> = attaque placée de l'équipe adverse</div>
+  <div class="def-row"><b>Transition OFF</b> = contre-attaque de l'équipe</div>
+  <div class="def-row"><b>Transition DEF</b> = transition OFF de l'équipe adverse</div>
+  <div class="def-row"><b>Touche OFF</b> = touche jouée en attaque</div>
+  <div class="def-row"><b>Touche DEF</b> = touche jouée en défense</div>
+  <div class="def-row"><b>Corner</b> = nombre de corners obtenus</div>
+  <div class="def-row"><b>Penalty</b> = nombre de penaltys obtenus</div>
+  <div class="def-row"><b>Jet Franc</b> = nombre de jets francs obtenus</div>
+  <div class="def-row"><b>Attaque (stat finale)</b> = touche OFF + touche DEF + transition OFF + coup franc + corner + attaque placée + penalty + jet franc</div>
+  <div class="def-row"><b>Gardien volant</b> = nombre de situations jouées en gardien volant</div>
+  <div class="def-row"><b>Power play</b> = nombre de situations jouées en power play</div>
+
+  <div class="footer"><span class="cap def-page">Méthodologie 3/4</span><span class="pg">09</span></div>
+</div>
+
+<!-- PAGE 10 : FICHE DÉFINITIONS (4/4) -->
+<div class="card">
+  <div class="kicker">MÉTHODOLOGIE</div>
+  <hr class="rule">
+  <h1 class="title" style="font-size:26px;">Comment sont construites les stats</h1>
+
+  <div class="def-group">Gardien</div>
+  <div class="def-row"><b>Tirs subis</b> = tirs cadrés encaissés par le gardien (buts inclus)</div>
+  <div class="def-row"><b>Buts subis</b> = buts encaissés par le gardien</div>
+  <div class="def-row"><b>Arrêts</b> = tirs subis − buts subis</div>
+  <div class="def-row"><b>% Arrêts</b> = arrêts / tirs subis</div>
+  <div class="def-row"><b>Relance facile réussie</b> = relance courte réussie</div>
+  <div class="def-row"><b>Relance difficile réussie</b> = relance longue réussie</div>
+  <div class="def-row"><b>Relance difficile loupée</b> = relance longue ratée</div>
+  <div class="def-row"><b>Hors cage</b> = tirs, duels, perte de balle, récupération, interception, passe loupée, faute subie/commise du gardien comme joueur de champ</div>
+
+  <div class="footer"><span class="cap def-page">Méthodologie 4/4</span><span class="pg">10</span></div>
 </div>
 
 </body>
