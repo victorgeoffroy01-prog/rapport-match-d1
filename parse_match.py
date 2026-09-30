@@ -341,8 +341,9 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
         tir_hc = get_val(row_index, "Tir HC", team, idx)
         tir_contre = get_val(row_index, "Tir Contré", team, idx)
         buts = get_val(row_index, "But", team, idx)
-        # même garde-fou que pour les gardiens : un but est toujours un tir cadré
-        tir_cadre = max(tir_cadre, buts)
+        # Victor ne tague jamais un but ET un tir cadré pour le même événement (tags mutuellement
+        # exclusifs) : le vrai total de tirs cadrés est donc la somme des deux, pas juste un plafond
+        tir_cadre = tir_cadre + buts
 
         duel_off_g = get_val(row_index, "Duel Gagné OFF", team, idx)
         duel_off_p = get_val(row_index, "Duel Perdu OFF", team, idx)
@@ -384,11 +385,8 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
             # pas la ligne de sa propre équipe (qui donnerait ses propres tirs/buts marqués).
             tir_cadre_subi = get_val(row_index, "Tir Cadré", opp, idx)
             but_subi = get_val(row_index, "But", opp, idx)
-            # garde-fou : un but implique forcément au moins un tir cadré, donc tirs subis >= buts subis.
-            # Si le tag "Tir Cadré" manque sur ce but précis dans la feuille source, on complète à 1 minimum
-            # (léger écart possible avec le total collectif dans ce cas précis, mais la carte du gardien
-            # reste toujours cohérente en elle-même, ce qui compte le plus pour un lecteur).
-            tir_cadre_subi = max(tir_cadre_subi, but_subi)
+            # même principe côté gardien : but et tir cadré jamais tagués ensemble, donc addition
+            tir_cadre_subi = tir_cadre_subi + but_subi
             stats["arrets"] = tir_cadre_subi - but_subi
             stats["tirs_cadres_subis"] = tir_cadre_subi
             stats["buts_subis"] = but_subi
@@ -426,21 +424,6 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
     for team in teams:
         for f in agg_fields:
             team_stats[team][f] = sum(s[f] for s in player_stats.values() if s["equipe"] == team)
-
-    # Réconciliation : si le garde-fou "but => tir cadré" a rehaussé les tirs cadrés d'une équipe
-    # au-delà de ce que ses gardiens adverses ont de tirs subis tagués, et qu'un seul gardien adverse
-    # a joué (donc aucune ambiguïté sur qui doit recevoir le tir manquant), on comble l'écart côté
-    # gardien pour que collectif et individuel restent cohérents des deux côtés.
-    for team in teams:
-        opp = [t for t in teams if t != team][0]
-        gardiens_opp = [nom for nom, s in player_stats.items() if s["gardien"] and s["equipe"] == opp]
-        if len(gardiens_opp) != 1:
-            continue  # ambigu avec 2 gardiens : on laisse le contrôle de cohérence le signaler
-        ecart = team_stats[team]["tirs_cadres"] - sum(player_stats[g]["tirs_cadres_subis"] for g in gardiens_opp)
-        if ecart > 0:
-            g = gardiens_opp[0]
-            player_stats[g]["tirs_cadres_subis"] += ecart
-            player_stats[g]["arrets"] += ecart
 
     # volume gardien volant / power play : toutes lignes confondues, pas par équipe
     gv_total = sum(v for idx_c, h in special_cols.items() if h == "Gardien Volant"
