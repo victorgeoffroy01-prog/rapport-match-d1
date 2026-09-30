@@ -427,6 +427,21 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
         for f in agg_fields:
             team_stats[team][f] = sum(s[f] for s in player_stats.values() if s["equipe"] == team)
 
+    # Réconciliation : si le garde-fou "but => tir cadré" a rehaussé les tirs cadrés d'une équipe
+    # au-delà de ce que ses gardiens adverses ont de tirs subis tagués, et qu'un seul gardien adverse
+    # a joué (donc aucune ambiguïté sur qui doit recevoir le tir manquant), on comble l'écart côté
+    # gardien pour que collectif et individuel restent cohérents des deux côtés.
+    for team in teams:
+        opp = [t for t in teams if t != team][0]
+        gardiens_opp = [nom for nom, s in player_stats.items() if s["gardien"] and s["equipe"] == opp]
+        if len(gardiens_opp) != 1:
+            continue  # ambigu avec 2 gardiens : on laisse le contrôle de cohérence le signaler
+        ecart = team_stats[team]["tirs_cadres"] - sum(player_stats[g]["tirs_cadres_subis"] for g in gardiens_opp)
+        if ecart > 0:
+            g = gardiens_opp[0]
+            player_stats[g]["tirs_cadres_subis"] += ecart
+            player_stats[g]["arrets"] += ecart
+
     # volume gardien volant / power play : toutes lignes confondues, pas par équipe
     gv_total = sum(v for idx_c, h in special_cols.items() if h == "Gardien Volant"
                    for label, values in rows for v in [values[idx_c]] if isinstance(v, (int, float)))
