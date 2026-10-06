@@ -49,16 +49,13 @@ if generer:
 
         try:
             with st.spinner("Génération en cours..."):
-                _, alertes = render(raw_path, compo_path, match_info, output_pdf,
+                render(raw_path, compo_path, match_info, output_pdf,
                        goals_db_path=goals_path, journee_num=int(journee_num))
             with open(output_pdf, "rb") as f:
                 pdf_bytes = f.read()
             st.success("Rapport généré.")
-            if alertes:
-                st.warning("Incohérence(s) détectée(s) — le PDF est généré quand même, à vérifier :\n\n"
-                           + "\n".join(f"- {a}" for a in alertes))
-            raw_stem = os.path.splitext(raw_file.name)[0]
-            pdf_name = f"Rapport_match_{raw_stem}.pdf"
+            # Nom : J01_LAVAL-NICE (domicile-extérieur)
+            pdf_name = f"J{int(journee_num):02d}_{match_info['team_a']}-{match_info['team_b']}.pdf"
             st.download_button("Télécharger le PDF", data=pdf_bytes,
                                 file_name=pdf_name, mime="application/pdf")
         except CompoError as e:

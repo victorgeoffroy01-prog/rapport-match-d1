@@ -123,6 +123,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     else:
         buteurs_a, buteurs_b = match_info["buteurs_a"], match_info["buteurs_b"]
 
+    match_info["team_a"], match_info["team_b"] = team_a, team_b  # pour le nom du fichier
     joueurs_a = build_player_rows(player_stats, team_a)
     joueurs_b = build_player_rows(player_stats, team_b)
     gardiens_a = build_gk_rows(player_stats, team_a)
