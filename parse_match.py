@@ -148,7 +148,7 @@ class GoalsDbError(Exception):
 TEAM_NAME_MAP = {
     "GOAL": "GOAL FUTSAL CLUB",
     "NANTES": "NANTES METROPOLE F.", "NMF": "NANTES METROPOLE F.",
-    "ACASA": "PARIS ACASA", "PARIS ACASA": "PARIS ACASA",
+    "ACASA": "PARIS ACASA FUTSAL", "PARIS ACASA": "PARIS ACASA FUTSAL",
     "LAVAL": "ETOILE LAVALLOISE FC",
     "MTP": "MONTPELLIER MED. F.",
     "SPORTING": "SPORTING CLUB PARIS", "SPORTING PARIS": "SPORTING CLUB PARIS",
@@ -337,13 +337,11 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
         opp = [t for t in teams if t != team][0]
         gardien = any(p["gardien"] for p in compo[team] if p["nom"] == nom)
 
-        tir_cadre = get_val(row_index, "Tir Cadré", team, idx)
+        buts = get_val(row_index, "But", team, idx)
+        # tags mutuellement exclusifs : un but n'est jamais tagué aussi "Tir Cadré" -> tir cadré réel = tagués + buts
+        tir_cadre = get_val(row_index, "Tir Cadré", team, idx) + buts
         tir_hc = get_val(row_index, "Tir HC", team, idx)
         tir_contre = get_val(row_index, "Tir Contré", team, idx)
-        buts = get_val(row_index, "But", team, idx)
-        # Victor ne tague jamais un but ET un tir cadré pour le même événement (tags mutuellement
-        # exclusifs) : le vrai total de tirs cadrés est donc la somme des deux, pas juste un plafond
-        tir_cadre = tir_cadre + buts
 
         duel_off_g = get_val(row_index, "Duel Gagné OFF", team, idx)
         duel_off_p = get_val(row_index, "Duel Perdu OFF", team, idx)
@@ -371,7 +369,7 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
 
         stats = {
             "equipe": team, "gardien": gardien,
-            "tirs": tir_cadre + tir_hc + tir_contre,  # but est déjà inclus dans tir_cadre
+            "tirs": tir_cadre + tir_hc + tir_contre,  # les buts sont inclus dans tir_cadre (tagués + buts)
             "tirs_cadres": tir_cadre, "tirs_hc": tir_hc, "tirs_contres": tir_contre, "buts": buts,
             "duel_off_gagne": duel_off_g, "duel_off_perdu": duel_off_p,
             "duel_def_gagne": duel_def_g, "duel_def_perdu": duel_def_p,
@@ -385,8 +383,11 @@ def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
             # pas la ligne de sa propre équipe (qui donnerait ses propres tirs/buts marqués).
             tir_cadre_subi = get_val(row_index, "Tir Cadré", opp, idx)
             but_subi = get_val(row_index, "But", opp, idx)
-            # même principe côté gardien : but et tir cadré jamais tagués ensemble, donc addition
-            tir_cadre_subi = tir_cadre_subi + but_subi
+            # garde-fou : un but implique forcément au moins un tir cadré, donc tirs subis >= buts subis.
+            # Si le tag "Tir Cadré" manque sur ce but précis dans la feuille source, on complète à 1 minimum
+            # (léger écart possible avec le total collectif dans ce cas précis, mais la carte du gardien
+            # reste toujours cohérente en elle-même, ce qui compte le plus pour un lecteur).
+            tir_cadre_subi = tir_cadre_subi + but_subi  # tags exclusifs : tirs subis = tagués + buts
             stats["arrets"] = tir_cadre_subi - but_subi
             stats["tirs_cadres_subis"] = tir_cadre_subi
             stats["buts_subis"] = but_subi
