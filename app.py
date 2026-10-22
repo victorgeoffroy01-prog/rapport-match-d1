@@ -1,7 +1,10 @@
 """
 Interface Streamlit pour générer le rapport de match D1 Futsal automatiquement.
 Upload : feuille de stats brute (xlsx) + compo (xlsx) + base des buteurs (xlsx) -> PDF direct.
+Optionnel : export XML Nacsport (positions) -> 4 pages de cartes de terrain ajoutées au rapport.
 """
+import io
+import zipfile
 import tempfile
 import os
 import streamlit as st
@@ -19,6 +22,8 @@ with col2:
     compo_file = st.file_uploader("Compo (2 équipes)", type=["xlsx"])
 with col3:
     goals_file = st.file_uploader("Base des buteurs", type=["xlsx"])
+xml_file = st.file_uploader("Export XML Nacsport (positions sur le terrain) : optionnel, ajoute les cartes",
+                            type=["xml"])
 
 mode = st.radio("Compétition", ["D1 Futsal", "Équipe de France"], horizontal=True)
 c1, c2 = st.columns(2)
@@ -55,23 +60,66 @@ if generer:
         with open(goals_path, "wb") as f:
             f.write(goals_file.getbuffer())
 
+        xml_path = None
+        if xml_file:
+            xml_path = os.path.join(tmp, "positions.xml")
+            with open(xml_path, "wb") as f:
+                f.write(xml_file.getbuffer())
+        dossier_png = os.path.join(tmp, "cartes_png")
+        os.makedirs(dossier_png)
+
         output_pdf = os.path.join(tmp, "rapport.pdf")
         match_info = {"saison": saison, "journee": journee_label, "competition": competition}
 
         try:
             with st.spinner("Génération en cours..."):
-                render(raw_path, compo_path, match_info, output_pdf,
-                       goals_db_path=goals_path, journee_num=journee_in)
+                _, alertes, ic = render(raw_path, compo_path, match_info, output_pdf,
+                                        goals_db_path=goals_path, journee_num=journee_in,
+                                        xml_path=xml_path, dossier_png=dossier_png)
             with open(output_pdf, "rb") as f:
                 pdf_bytes = f.read()
-            st.success("Rapport généré.")
-            # Nom : J01_LAVAL-NICE (domicile-extérieur)
-            pdf_name = nom_fichier(match_info)
-            st.download_button("Télécharger le PDF", data=pdf_bytes,
-                                file_name=pdf_name, mime="application/pdf")
+            zip_bytes = None
+            if ic["png"]:
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w") as z:
+                    for p in ic["png"]:
+                        z.write(p, os.path.basename(p))
+                zip_bytes = buf.getvalue()
+            # Gardé en mémoire : les boutons de téléchargement restent après un clic
+            st.session_state["resultat"] = dict(
+                pdf=pdf_bytes, nom=nom_fichier(match_info), zip=zip_bytes, alertes=alertes, cartes=ic,
+                avec_xml=bool(xml_file))
         except CompoError as e:
+            st.session_state.pop("resultat", None)
             st.error("Incohérence compo / feuille brute :\n\n" + str(e))
         except GoalsDbError as e:
+            st.session_state.pop("resultat", None)
             st.error("Problème avec la base des buteurs :\n\n" + str(e))
         except Exception as e:
+            st.session_state.pop("resultat", None)
             st.error(f"Erreur inattendue : {e}")
+
+res = st.session_state.get("resultat")
+if res:
+    ic = res["cartes"]
+    st.success("Rapport généré." + (f" {ic['pages']} pages de cartes ajoutées." if ic["pages"] else ""))
+    # Contrôles : feuille brute, puis cartes
+    for al in res["alertes"]:
+        st.warning(al)
+    if ic["erreur_xml"]:
+        st.error("Cartes non ajoutées, XML inutilisable :\n\n" + ic["erreur_xml"])
+    if ic["erreurs"]:
+        st.error("Actions sans position (point absent de la carte), à corriger dans Nacsport :\n\n"
+                 + "\n".join(f"- {e}" for e in ic["erreurs"]))
+    if ic["alertes"]:
+        st.warning("Écarts entre le XML et la feuille brute :\n\n"
+                   + "\n".join(f"- {e}" for e in ic["alertes"]))
+    for info in ic["infos"]:
+        st.info(info)
+    if res["avec_xml"] and ic["pages"] and not (ic["erreurs"] or ic["alertes"]):
+        st.success("Cartes : chaque action a son point et les chiffres collent à la feuille brute.")
+    # Nom : J01_LAVAL-NICE (domicile-extérieur)
+    st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")
+    if res["zip"]:
+        st.download_button("Télécharger les cartes en images (site)", data=res["zip"],
+                           file_name=res["nom"].replace(".pdf", "_cartes.zip"), mime="application/zip")

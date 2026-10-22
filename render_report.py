@@ -11,8 +11,14 @@ from weasyprint import HTML
 import re
 from parse_match import compute, load_compo, load_goals_for_match, get_home_away, resolve_journee, GoalsDbError
 from controles import controler
+import os
+import tempfile
+from pypdf import PdfReader, PdfWriter
+import cartes
+from nacsport_xml import XmlError
 
 TEMPLATE_PATH = "report_template.html.j2"
+PAGES_AVANT_CARTES = 5   # les cartes s'ajoutent après la page gardiens (05), en fin de rapport
 
 
 def nom_fichier(match_info):
@@ -114,7 +120,8 @@ def build_stat_groups(team_stats, team_a, team_b):
     ]
 
 
-def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, journee_num=None):
+def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, journee_num=None,
+           xml_path=None, dossier_png=None):
     """
     match_info attend les clés éditoriales manuelles :
     saison, journee (texte affiché), hook_text, verdict_html, factor_1 {titre, texte},
@@ -162,6 +169,17 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         "prochain_logo_b": match_info.get("prochain_logo_b"),
     }
 
+    # Cartes de terrain (optionnel), numérotées à la suite de la page gardiens
+    infos_cartes = dict(pdf=None, pages=0, erreurs=[], alertes=[], infos=[], png=[], erreur_xml=None)
+    if xml_path:
+        try:
+            pdf_cartes = os.path.join(tempfile.mkdtemp(), "cartes.pdf")
+            infos_cartes.update(cartes.generer(xml_path, [team_a, team_b], pdf_cartes,
+                                               num_depart=PAGES_AVANT_CARTES + 1, team_stats=team_stats,
+                                               dossier_png=dossier_png))
+        except XmlError as e:
+            infos_cartes["erreur_xml"] = str(e)
+
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = jinja2.Template(f.read())
     html_out = template.render(**context)
@@ -171,10 +189,32 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
 
     HTML(string=html_out, base_url=".").write_pdf(output_pdf)
 
+    if infos_cartes["pdf"]:
+        inserer_pages(output_pdf, infos_cartes["pdf"], apres=PAGES_AVANT_CARTES)
+
     alertes = controler(context)
     for a in alertes:
         print("⚠", a)
-    return output_pdf, alertes
+    return output_pdf, alertes, infos_cartes
+
+
+def inserer_pages(pdf_rapport, pdf_insert, apres):
+    """Insère les pages de pdf_insert dans pdf_rapport après la page n° `apres`, mises au même format."""
+    base, ins = PdfReader(pdf_rapport), PdfReader(pdf_insert)
+    larg, haut = float(base.pages[0].mediabox.width), float(base.pages[0].mediabox.height)
+    w = PdfWriter()
+    for i, p in enumerate(base.pages):
+        if i == apres:
+            for q in ins.pages:
+                q.scale_to(larg, haut)
+                w.add_page(q)
+        w.add_page(p)
+    if apres >= len(base.pages):
+        for q in ins.pages:
+            q.scale_to(larg, haut)
+            w.add_page(q)
+    with open(pdf_rapport, "wb") as f:
+        w.write(f)
 
 
 if __name__ == "__main__":
@@ -184,7 +224,7 @@ if __name__ == "__main__":
         "prochaine_journee_affiche": "MONTPELLIER - TOULON",
     }
     try:
-        out, alertes = render("LAVAL_-_NICE.xlsx", "Compo_D1_.xlsx", match_info, "Rapport_LAVAL_NICE.pdf",
+        out, alertes, _ = render("LAVAL_-_NICE.xlsx", "Compo_D1_.xlsx", match_info, "Rapport_LAVAL_NICE.pdf",
                      goals_db_path="But_D1_26_27.xlsx", journee_num=1)
         print("PDF généré :", out)
         if not alertes:
