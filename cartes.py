@@ -29,7 +29,10 @@ CREME, ENCRE, GRIS = "#F3F1EA", "#111111", "#8A8885"
 ROUGE_KICKER = "#EF3B30"
 COUL_EQ = ["#2F5FD0", "#E5352B"]   # 1re équipe affichée (France si présente, sinon domicile) bleu, 2e rouge
 
-F = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts") + "/"
+# Polices : dossier fonts/ ou, à défaut, à la racine du dépôt (à côté de ce fichier)
+_ICI = os.path.dirname(os.path.abspath(__file__))
+F = (os.path.join(_ICI, "fonts") if os.path.isfile(os.path.join(_ICI, "fonts", "Poppins-Regular.ttf"))
+     else _ICI) + "/"
 POP = fm.FontProperties(fname=F + "Poppins-Regular.ttf")
 POPB = fm.FontProperties(fname=F + "Poppins-Bold.ttf")
 POPS = fm.FontProperties(fname=F + "Poppins-SemiBold.ttf")
