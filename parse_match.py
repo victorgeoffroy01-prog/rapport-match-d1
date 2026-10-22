@@ -14,7 +14,25 @@ Principe général observé sur la feuille brute :
 """
 import openpyxl
 import re
+import difflib
 from collections import defaultdict
+
+# "10. NOM" ou "5 NOM" (le point est parfois oublié dans la feuille de tag)
+HEADER_RE = re.compile(r"^\s*(\d+)\s*\.?\s*(.+?)\s*$")
+
+# Nom de feuille de compo -> nom utilisé dans les libellés de la feuille de tag
+COMPO_TEAM_ALIASES = {"EDF": "FRANCE"}
+# Nom d'équipe -> nom de l'onglet équipe dans la base buteurs (si différent)
+GOALS_SHEET_ALIASES = {"FRANCE": "EDF"}
+
+# Catégories connues de la feuille de tag (pour déduire une équipe adverse sans compo)
+KNOWN_CATEGORIES = sorted([
+    "ATT 4-0", "ATT 1-2-1", "ATT", "Trans OFF", "Touche OFF", "Touche DEF", "Coup Franc", "Corner",
+    "Penalty", "Jet Franc", "Duel Gagné OFF", "Duel Perdu OFF", "Ballon Rendu", "Perte de balle",
+    "Relance Facile Réussi", "Relance Difficile Réussi", "Relance Difficile Loupée", "Interception",
+    "Récupération", "Faute Subie", "Tir Cadré", "Tir HC", "Tir Contré", "But", "Passe Loupée",
+    "Passe Désicive", "Passe Décisive", "Poteau",
+], key=len, reverse=True)
 
 RAW_PATH = "LAVAL_-_NICE.xlsx"
 COMPO_PATH = "Compo_D1_.xlsx"
@@ -29,6 +47,7 @@ def load_compo(path):
     for sheet_name in wb.sheetnames:
         ws = wb[sheet_name]
         team = str(ws.cell(row=1, column=2).value).strip()
+        team = COMPO_TEAM_ALIASES.get(team.upper(), team)
         players = []
         header_row = next(r for r in range(1, ws.max_row + 1) if ws.cell(row=r, column=1).value == "Nom")
         header_cells = [str(c.value).strip() if c.value else "" for c in ws[header_row]]
@@ -80,7 +99,7 @@ def build_column_map(header, compo):
         for p in players:
             all_players[(p["numero"], p["nom"])] = team
 
-    header_re = re.compile(r"^\s*(\d+)\.\s*(.+?)\s*$")
+    header_re = HEADER_RE
     unmatched = []
     for idx, h in enumerate(header):
         if idx == 0 or h is None:
@@ -118,7 +137,7 @@ def validate_compo_vs_raw(header, compo):
     la compo est l'effectif du club, pas la feuille de match — un remplaçant qui n'a pas joué n'a
     simplement aucune colonne, ce n'est pas une erreur.
     """
-    header_re = re.compile(r"^\s*(\d+)\.\s*(.+?)\s*$")
+    header_re = HEADER_RE
     raw_players = {}  # (numero, nom) -> libellé brut d'origine
     for h in header:
         if h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But "):
@@ -158,7 +177,47 @@ TEAM_NAME_MAP = {
     "TOULOUSE": "UJS TOULOUSE", "UJS": "UJS TOULOUSE",
     "ARTISTE": "ARTISTES FUTSAL", "ARTISTES": "ARTISTES FUTSAL",
     "GARGES": "GARGES",  # nom officiel pas encore confirmé (pas encore de but dans la base) — à corriger dès qu'on le voit
+    "FRANCE": "FRANCE", "EDF": "FRANCE", "MOLDAVIE": "MOLDAVIE",
 }
+
+
+def official(team):
+    """Nom officiel dans la base buteurs ; si l'équipe n'est pas dans le dictionnaire (adversaire
+    international par ex.), on suppose que la base utilise le même nom que la feuille de tag."""
+    return TEAM_NAME_MAP.get(team, team)
+
+
+def _same_journee(cell, wanted):
+    if wanted is None:
+        return True
+    if cell == wanted:
+        return True
+    return str(cell).strip().lower() == str(wanted).strip().lower()
+
+
+def resolve_journee(goals_db_path, team_a, team_b, journee=None):
+    """Retourne la valeur exacte de la colonne 'journee' de la base pour ce match.
+    journee=None -> déduit automatiquement depuis le couple d'équipes (erreur s'il y a plusieurs matchs)."""
+    off = {official(team_a), official(team_b)}
+    wb = openpyxl.load_workbook(goals_db_path, data_only=True)
+    sheet_name = next((s for s in wb.sheetnames if s.strip().upper().startswith("BUT D1")), None)
+    if sheet_name is None:
+        raise GoalsDbError("Onglet maître 'BUT D1' introuvable dans le fichier buteurs.")
+    ws = wb[sheet_name]
+    header = [c.value for c in ws[1]]
+    col = {h: i for i, h in enumerate(header) if h}
+    found = []
+    for r in ws.iter_rows(min_row=2, values_only=True):
+        if r[col["journee"]] is None:
+            continue
+        if {r[col["equipe_domicile"]], r[col["equipe_exterieure"]]} == off and _same_journee(r[col["journee"]], journee):
+            if r[col["journee"]] not in found:
+                found.append(r[col["journee"]])
+    if not found:
+        raise GoalsDbError(f"Aucun but trouvé pour {team_a} vs {team_b} (journée : {journee or 'auto'}) dans la base buteurs.")
+    if len(found) > 1:
+        raise GoalsDbError(f"Plusieurs matchs {team_a} vs {team_b} dans la base : {found}. Précise le match (journée).")
+    return found[0]
 
 
 def match_scorer_name(full_name, compo_players):
@@ -177,9 +236,10 @@ def match_scorer_name(full_name, compo_players):
 def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
     """Repli : si l'origine est vide dans l'onglet maître, on va la chercher dans l'onglet de
     l'équipe qui a marqué (parfois renseignée là seulement, comme observé sur la saison en cours)."""
-    if team_short not in wb.sheetnames:
+    sheet = GOALS_SHEET_ALIASES.get(team_short, team_short)
+    if sheet not in wb.sheetnames:
         return None
-    ws = wb[team_short]
+    ws = wb[sheet]
     header = [c.value for c in ws[1]]
     col = {h: i for i, h in enumerate(header) if h}
     needed = {"journee", "minute", "joueur", "origine_but"}
@@ -187,7 +247,7 @@ def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
         return None
     for r in range(2, ws.max_row + 1):
         row = [ws.cell(row=r, column=c + 1).value for c in range(len(header))]
-        if row[col["journee"]] == journee and row[col["minute"]] == minute and row[col["joueur"]] == scorer_full:
+        if _same_journee(row[col["journee"]], journee) and row[col["minute"]] == minute and row[col["joueur"]] == scorer_full:
             return (row[col["origine_but"]] or "").strip()
     return None
 
@@ -196,9 +256,7 @@ def get_home_away(goals_db_path, team_a, team_b, journee):
     """Détermine qui est domicile/extérieur pour CE match via l'onglet maître de la base buteurs
     (colonnes equipe_domicile/equipe_exterieure). Repli sur (team_a, team_b) tel quel si le match
     n'y est pas trouvé (base pas encore à jour, etc.)."""
-    off_a, off_b = TEAM_NAME_MAP.get(team_a), TEAM_NAME_MAP.get(team_b)
-    if off_a is None or off_b is None:
-        return team_a, team_b
+    off_a, off_b = official(team_a), official(team_b)
     wb = openpyxl.load_workbook(goals_db_path, data_only=True)
     sheet_name = next((s for s in wb.sheetnames if s.strip().upper().startswith("BUT D1")), None)
     if sheet_name is None:
@@ -212,7 +270,7 @@ def get_home_away(goals_db_path, team_a, team_b, journee):
         dom = ws.cell(row=r, column=col["equipe_domicile"] + 1).value
         ext = ws.cell(row=r, column=col["equipe_exterieure"] + 1).value
         jr = ws.cell(row=r, column=col["journee"] + 1).value
-        if jr == journee and {dom, ext} == {off_a, off_b}:
+        if _same_journee(jr, journee) and {dom, ext} == {off_a, off_b}:
             return (team_a, team_b) if dom == off_a else (team_b, team_a)
     return team_a, team_b
 
@@ -220,9 +278,7 @@ def get_home_away(goals_db_path, team_a, team_b, journee):
 def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
     """Filtre l'onglet maître 'BUT D1' par journée + les 2 équipes (noms courts de la compo),
     rattache chaque buteur à un nom de la compo, et retourne (buteurs_a, buteurs_b) triés par minute."""
-    off_a, off_b = TEAM_NAME_MAP.get(team_a), TEAM_NAME_MAP.get(team_b)
-    if off_a is None or off_b is None:
-        raise GoalsDbError(f"Nom officiel introuvable pour '{team_a}' ou '{team_b}' — ajoute-le à TEAM_NAME_MAP.")
+    off_a, off_b = official(team_a), official(team_b)
 
     wb = openpyxl.load_workbook(goals_db_path, data_only=True)
     sheet_name = next((s for s in wb.sheetnames if s.strip().upper().startswith("BUT D1")), None)
@@ -238,7 +294,7 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
     buteurs_a, buteurs_b, unmatched = [], [], []
     for r in range(2, ws.max_row + 1):
         row = [ws.cell(row=r, column=c + 1).value for c in range(len(header))]
-        if row[col["journee"]] != journee:
+        if not _same_journee(row[col["journee"]], journee):
             continue
         dom, ext = row[col["equipe_domicile"]], row[col["equipe_exterieure"]]
         if {dom, ext} != {off_a, off_b}:
@@ -251,7 +307,8 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         if not origine:
             origine = _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full) or ""
         candidates = players_a if team_short == team_a else players_b
-        matched = match_scorer_name(scorer_full, candidates)
+        # équipe sans compo (adversaire) : on garde le nom complet de la base tel quel
+        matched = match_scorer_name(scorer_full, candidates) if candidates else scorer_full.upper()
         entry = {"minute": f"{minute}'", "joueur": matched or f"?? ({scorer_full})", "origine": origine}
         if matched is None:
             unmatched.append(scorer_full)
@@ -303,33 +360,75 @@ def get_total(row_index, category, team):
 
 
 def detect_teams_in_raw(rows, known_teams):
-    """Déduit les équipes réellement présentes dans CE match à partir des suffixes des libellés de ligne,
-    pour ignorer les autres équipes de la compo (qui grossit au fil des matchs, style carnet de rosters)."""
+    """Déduit les 2 équipes du match depuis les suffixes des libellés de ligne.
+    Équipes de la compo reconnues d'abord ; une équipe SANS compo (adversaire d'un match de l'équipe de
+    France par ex.) est déduite via les catégories connues ("Duel Gagné OFF MOLDAVIE" -> MOLDAVIE).
+    Retourne (equipes_compo_presentes, equipes_sans_compo)."""
     present = set()
     for label, _values in rows:
         label_clean = " ".join(str(label).split()).upper()
         for team in known_teams:
             if label_clean.endswith(" " + team.upper()):
                 present.add(team)
-    if len(present) != 2:
+    inferred = set()
+    for label, _values in rows:
+        label_clean = " ".join(str(label).split())
+        for cat in KNOWN_CATEGORIES:
+            if label_clean.upper().startswith(cat.upper() + " "):
+                suffix = label_clean[len(cat) + 1:].strip().upper()
+                if suffix and suffix not in {t.upper() for t in known_teams}:
+                    inferred.add(suffix)
+                break
+    if len(present) + len(inferred) != 2 or len(present) == 0:
         raise CompoError(
-            f"Impossible de déduire les 2 équipes du match depuis la feuille brute (trouvé : {sorted(present)}). "
-            f"Vérifie que le nom d'équipe dans la compo correspond exactement au nom utilisé dans les libellés "
-            f"de la feuille de tag (ex. 'LAVAL' partout, pas 'Laval' ou 'FC Laval')."
+            f"Impossible de déduire les 2 équipes du match depuis la feuille brute (trouvé : "
+            f"{sorted(present | inferred)}). Vérifie que le nom d'équipe dans la compo correspond exactement "
+            f"au nom utilisé dans les libellés de la feuille de tag (ex. 'LAVAL' partout, pas 'Laval' ou 'FC Laval')."
         )
-    return present
+    return present, inferred
+
+
+def build_pseudo_compo(header, rows, row_index, team, compo):
+    """Compo minimale d'une équipe sans fichier de compo : toutes les colonnes joueur de la feuille
+    brute qui ne sont dans aucune compo connue. Gardien = colonne avec des relances taguées pour cette équipe.
+    Garde-fou : un nom très proche d'un joueur de la compo (faute de frappe) bloque, sinon il serait
+    rangé chez l'adversaire sans que personne le voie."""
+    known = {(p["numero"], p["nom"]) for pl in compo.values() for p in pl}
+    known_names = [p["nom"] for pl in compo.values() for p in pl]
+    players = []
+    for idx, h in enumerate(header):
+        if idx == 0 or h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But "):
+            continue
+        m = HEADER_RE.match(str(h))
+        if not m:
+            continue
+        numero, nom = int(m.group(1)), m.group(2).strip().upper()
+        if (numero, nom) in known:
+            continue
+        close = difflib.get_close_matches(nom, known_names, n=1, cutoff=0.8)
+        if close:
+            raise CompoError(
+                f"La colonne '{h}' de la feuille brute ressemble au joueur '{close[0]}' de la compo mais "
+                f"l'orthographe diffère. Corrige l'un des deux fichiers (sinon ce joueur serait compté dans {team})."
+            )
+        relances = sum(get_val(row_index, cat, team, idx)
+                       for cat in ("Relance Facile Réussi", "Relance Difficile Réussi", "Relance Difficile Loupée"))
+        players.append({"nom": nom, "numero": numero, "gardien": relances > 0, "alias": None})
+    return players
 
 
 def compute(raw_path=RAW_PATH, compo_path=COMPO_PATH):
     compo_full = load_compo(compo_path)
     header, rows = load_raw(raw_path)
-    present = detect_teams_in_raw(rows, list(compo_full.keys()))
-    # ordre déterministe : celui des feuilles de la compo, pas l'ordre (aléatoire) du set détecté
-    teams = [t for t in compo_full.keys() if t in present]
-    compo = {team: compo_full[team] for team in teams}
+    present, sans_compo = detect_teams_in_raw(rows, list(compo_full.keys()))
+    # ordre déterministe : celui des feuilles de la compo, puis l'équipe sans compo
+    teams = [t for t in compo_full.keys() if t in present] + sorted(sans_compo)
+    compo = {team: compo_full[team] for team in teams if team in compo_full}
+    row_index = build_row_index(rows, teams)
+    for team in sans_compo:
+        compo[team] = build_pseudo_compo(header, rows, row_index, team, compo)
     validate_compo_vs_raw(header, compo)  # lève CompoError et stoppe tout si incohérence
     col_map, special_cols, unmatched = build_column_map(header, compo)
-    row_index = build_row_index(rows, teams)
 
     # stats indiv
     player_stats = {}

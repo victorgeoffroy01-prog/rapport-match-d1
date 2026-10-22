@@ -148,7 +148,7 @@
 
 <!-- PAGE 1 : COVER -->
 <div class="card">
-  <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - D1 FUTSAL</div>
+  <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - {{ competition | upper }}</div>
   <hr class="rule">
   <div class="logos-row">
     <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% else %}LOGO<br>{{ team_a }}{% endif %}</div>

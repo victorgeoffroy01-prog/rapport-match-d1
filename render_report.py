@@ -8,10 +8,22 @@ et les minutes des buteurs (en attendant le fichier "buts saison en cours" évoq
 """
 import jinja2
 from weasyprint import HTML
-from parse_match import compute, load_compo, load_goals_for_match, get_home_away, GoalsDbError
+import re
+from parse_match import compute, load_compo, load_goals_for_match, get_home_away, resolve_journee, GoalsDbError
 from controles import controler
 
 TEMPLATE_PATH = "report_template.html.j2"
+
+
+def nom_fichier(match_info):
+    """J05_NMF-ACASA.pdf (D1) ou J02_MOLDAVIE-FRANCE.pdf (journée texte "J2 – ...")."""
+    j = match_info.get("journee_resolue")
+    if isinstance(j, int):
+        prefixe = f"J{j:02d}"
+    else:
+        m = re.match(r"\s*J\s*(\d+)", str(j or ""))
+        prefixe = f"J{int(m.group(1)):02d}" if m else re.sub(r"\W+", "", str(j or "MATCH"))[:12]
+    return f"{prefixe}_{match_info['team_a']}-{match_info['team_b']}.pdf"
 
 
 def build_duel_pct(gagne, perdu):
@@ -113,12 +125,17 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     player_stats, team_stats, gv, pp = compute(raw_path, compo_path)
     teams = list(team_stats.keys())
     team_a, team_b = teams[0], teams[1]
-    if goals_db_path and journee_num is not None:
+    if goals_db_path:
+        # journee_num : entier D1, texte exact de la base (ex. "J2 – Qualif Mondial"), ou None = auto
+        journee_num = resolve_journee(goals_db_path, team_a, team_b, journee_num)
+        match_info["journee_resolue"] = journee_num
+        if not match_info.get("journee"):
+            match_info["journee"] = journee_num if isinstance(journee_num, str) else f"Journée {journee_num}"
         team_a, team_b = get_home_away(goals_db_path, team_a, team_b, journee_num)
 
-    if goals_db_path and journee_num is not None:
+    if goals_db_path:
         compo_full = load_compo(compo_path)
-        compo_noms = {t: [{"nom": p["nom"], "alias": p.get("alias")} for p in compo_full[t]] for t in (team_a, team_b)}
+        compo_noms = {t: [{"nom": p["nom"], "alias": p.get("alias")} for p in compo_full.get(t, [])] for t in (team_a, team_b)}
         buteurs_a, buteurs_b = load_goals_for_match(goals_db_path, team_a, team_b, journee_num, compo_noms)
     else:
         buteurs_a, buteurs_b = match_info["buteurs_a"], match_info["buteurs_b"]
@@ -133,6 +150,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         "team_a": team_a, "team_b": team_b,
         "score_a": team_stats[team_a]["buts"], "score_b": team_stats[team_b]["buts"],
         "saison": match_info["saison"], "journee": match_info["journee"],
+        "competition": match_info.get("competition", "D1 FUTSAL"),
         "buteurs_a": buteurs_a, "buteurs_b": buteurs_b,
         "logo_a": match_info.get("logo_a"), "logo_b": match_info.get("logo_b"),
         "stat_groups": build_stat_groups(team_stats, team_a, team_b),
