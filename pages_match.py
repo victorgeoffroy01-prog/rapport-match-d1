@@ -310,11 +310,10 @@ def page_entrees(pdf, num, data, equipes):
             ax.add_patch(FancyArrow(12, ycen, 14, 0, width=larg, head_width=larg * 1.6 + 0.6, head_length=2.6,
                                     length_includes_head=True, fc=col, ec="none",
                                     alpha=0.35 + 0.65 * v["n"] / entres, zorder=5))
-            ax.text(27.3, ycen + 1.0, f"{c}  {v['n']} · {round(100 * v['n'] / d['total'])} %",
-                    fontproperties=C.PLAY, fontsize=15, color=col, va="center", zorder=6,
+            ax.text(27.3, ycen + 1.1, c, fontproperties=C.PLAY, fontsize=15, color=col, va="center", zorder=6,
                     bbox=dict(fc=C.CREME, ec="none", pad=1.5, alpha=0.9))
-            ax.text(27.3, ycen - 1.5, f"{v['tir']} avec tir · {v['but']} but{'s' if v['but'] > 1 else ''}",
-                    fontproperties=C.POPS, fontsize=8.5, color="#3A3936", va="center", zorder=6,
+            ax.text(27.3, ycen - 1.4, f"{v['n']}  ·  {round(100 * v['n'] / d['total'])} %",
+                    fontproperties=C.POPS, fontsize=11, color=C.ENCRE, va="center", zorder=6,
                     bbox=dict(fc=C.CREME, ec="none", pad=1.5, alpha=0.9))
         s_ = d["lignes"].get("Sans entrée", dict(n=0, tir=0, but=0))
         ax.text(4.2, C.W / 2, f"{s_['n']}\nsans\nentrée", fontproperties=C.POPB, fontsize=9, color=C.GRIS,
@@ -327,8 +326,8 @@ def page_entrees(pdf, num, data, equipes):
             xx = 0.07 + i * 0.30
             fig.text(xx, yk, str(val), fontproperties=C.PLAY, fontsize=21, color=col)
             fig.text(xx, yk - 0.022, lab.upper(), fontproperties=C.POPS, fontsize=7, color="#55534F")
-    fig.text(0.07, 0.09, "Couloir où le ballon franchit la ligne médiane, une fois par possession · "
-             "« avec tir » : la possession se termine par un tir", fontproperties=C.POP, fontsize=6.5, color=C.GRIS)
+    fig.text(0.07, 0.09, "Couloir où le ballon franchit la ligne médiane, une fois par possession",
+             fontproperties=C.POP, fontsize=6.5, color=C.GRIS)
     pdf.savefig(fig, facecolor=C.CREME)
     plt.close(fig)
 
