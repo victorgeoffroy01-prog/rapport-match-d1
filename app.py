@@ -102,7 +102,8 @@ if generer:
 res = st.session_state.get("resultat")
 if res:
     ic = res["cartes"]
-    st.success("Rapport généré." + (f" {ic['pages']} pages de cartes ajoutées." if ic["pages"] else ""))
+    n_xml = ic["pages"] + ic.get("pages_extras", 0)
+    st.success("Rapport généré." + (f" {n_xml} pages tirées du XML ajoutées." if n_xml else ""))
     # Contrôles : feuille brute, puis cartes
     for al in res["alertes"]:
         st.warning(al)
@@ -114,9 +115,11 @@ if res:
     if ic["alertes"]:
         st.warning("Écarts entre le XML et la feuille brute :\n\n"
                    + "\n".join(f"- {e}" for e in ic["alertes"]))
+    if ic.get("alertes_tags"):
+        st.warning("Tags à vérifier dans Nacsport :\n\n" + "\n".join(f"- {e}" for e in ic["alertes_tags"]))
     for info in ic["infos"]:
         st.info(info)
-    if res["avec_xml"] and ic["pages"] and not (ic["erreurs"] or ic["alertes"]):
+    if res["avec_xml"] and ic["pages"] and not (ic["erreurs"] or ic["alertes"] or ic.get("alertes_tags")):
         st.success("Cartes : chaque action a son point et les chiffres collent à la feuille brute.")
     # Nom : J01_LAVAL-NICE (domicile-extérieur)
     st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")

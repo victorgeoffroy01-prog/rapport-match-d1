@@ -34,6 +34,13 @@ KNOWN_CATEGORIES = sorted([
     "Passe Désicive", "Passe Décisive", "Poteau",
 ], key=len, reverse=True)
 
+def colonne_descripteur(h):
+    """Colonnes de descripteurs qui ne sont pas des joueurs : joueurs sur le terrain aux buts (T_9.LUTIN),
+    entrées dans la moitié adverse (Entrée_gauche, Sans_entrée...), repères de chrono (2, 4 ... 40)."""
+    t = str(h).strip()
+    return t.upper().startswith(("T_", "ENTR", "SANS")) or t.isdigit()
+
+
 RAW_PATH = "LAVAL_-_NICE.xlsx"
 COMPO_PATH = "Compo_D1_.xlsx"
 
@@ -107,6 +114,9 @@ def build_column_map(header, compo):
         if h in ("Gardien Volant", "Power Play"):
             special_cols[idx] = h
             continue
+        if colonne_descripteur(h):
+            special_cols[idx] = str(h)  # descripteurs lus dans le XML, pas des joueurs
+            continue
         if h in ("But LAVAL", "But NICE") or h.startswith("But "):
             special_cols[idx] = h  # qualificatif "action ayant mené à un but", hors scope v1
             continue
@@ -140,7 +150,7 @@ def validate_compo_vs_raw(header, compo):
     header_re = HEADER_RE
     raw_players = {}  # (numero, nom) -> libellé brut d'origine
     for h in header:
-        if h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But "):
+        if h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But ") or colonne_descripteur(h):
             continue
         m = header_re.match(str(h))
         if m:
@@ -397,7 +407,8 @@ def build_pseudo_compo(header, rows, row_index, team, compo):
     known_names = [p["nom"] for pl in compo.values() for p in pl]
     players = []
     for idx, h in enumerate(header):
-        if idx == 0 or h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But "):
+        if (idx == 0 or h is None or h in ("Gardien Volant", "Power Play") or str(h).startswith("But ")
+                or colonne_descripteur(h)):
             continue
         m = HEADER_RE.match(str(h))
         if not m:
