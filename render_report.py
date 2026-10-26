@@ -15,6 +15,8 @@ import os
 import tempfile
 from pypdf import PdfReader, PdfWriter
 import cartes
+import pages_match
+from matplotlib.backends.backend_pdf import PdfPages
 from nacsport_xml import XmlError
 
 TEMPLATE_PATH = "report_template.html.j2"
@@ -113,7 +115,7 @@ def build_stat_groups(team_stats, team_a, team_b):
         {"label": "Discipline / phase", "rows": [
             pair("FAUTE SUBIE / COMMISE", "faute_subie", "faute_commise", "faute_subie", "faute_commise"),
             row("COUP FRANC", "coup_franc"),
-            {"label": "ATTAQUE", "a": attaque(a), "b": attaque(b)},
+            {"label": "POSSESSIONS", "a": attaque(a), "b": attaque(b)},
             row("TRANSITION OFF", "transition_off"),
             row("CORNER", "corner"),
         ]},
@@ -180,6 +182,15 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
                                                dossier_png=dossier_png))
         except XmlError as e:
             infos_cartes["erreur_xml"] = str(e)
+    # Pages d'analyse (joueurs sur le terrain aux buts, entrées dans la moitié adverse, momentum)
+    infos_cartes.update(pdf_extras=None, pages_extras=0, alertes_tags=[])
+    if xml_path and infos_cartes["pdf"]:
+        pdf_extras = os.path.join(tempfile.mkdtemp(), "analyse.pdf")
+        with PdfPages(pdf_extras) as pp_:
+            n, al, inf = pages_match.generer(xml_path, [team_a, team_b], pp_,
+                                             PAGES_AVANT_CARTES + 1 + infos_cartes["pages"], load_compo(compo_path))
+        infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n, alertes_tags=al)
+        infos_cartes["infos"] += inf
 
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = jinja2.Template(f.read())
@@ -192,6 +203,8 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
 
     if infos_cartes["pdf"]:
         inserer_pages(output_pdf, infos_cartes["pdf"], apres=PAGES_AVANT_CARTES)
+    if infos_cartes["pdf_extras"]:
+        inserer_pages(output_pdf, infos_cartes["pdf_extras"], apres=PAGES_AVANT_CARTES + infos_cartes["pages"])
 
     alertes = controler(context)
     for a in alertes:
