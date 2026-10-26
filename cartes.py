@@ -13,6 +13,7 @@ Un contrôle compare ces chiffres à ceux de la feuille brute et chaque action s
 """
 import os
 import sys
+import re
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -366,7 +367,37 @@ LIBELLES = {"buts": "buts", "tirs": "tirs", "tirs_cadres": "tirs cadrés", "tirs
             "faute_subie": "fautes subies"}
 
 
-def generer(xml_path, equipes, out_pdf, num_depart=1, team_stats=None, dossier_png=None):
+# Pour chaque stat : les actions XML qui la composent, et de quel côté se trouve le joueur compté
+#   "moi" = action de l'équipe, "adv" = action de l'adversaire où le joueur de l'équipe est le vis-à-vis
+SOURCES = {
+    "buts": [("But", "moi")], "tirs_cadres": [("But", "moi"), ("Tir cadré", "moi")],
+    "tirs_hc": [("Tir hors cadre", "moi"), ("Poteau", "moi")], "tirs_contres": [("Tir contré", "moi")],
+    "tirs": [(a, "moi") for a in TIRS],
+    "recuperation": [("Récupération", "moi")], "interception": [("Interception", "moi")],
+    "perte_balle": [("Perte de balle", "moi"), ("Ballon rendu", "moi"), ("Récupération", "adv")],
+    "passe_loupee": [("Passe loupée", "moi"), ("Interception", "adv")],
+    "duel_off_gagne": [("Duel gagné", "moi")], "duel_off_perdu": [("Duel perdu", "moi")],
+    "faute_subie": [("Faute subie", "moi")],
+}
+
+
+def suspects(df, eq, opp, cle, joueurs_equipe):
+    """Tags qui expliquent un écart : la feuille brute compte 1 par joueur de l'équipe coché sur le tag,
+    le XML compte 1 par tag. Un tag avec 0 ou 2 joueurs de l'équipe crée donc un écart."""
+    out = []
+    for act, cote in SOURCES[cle]:
+        qui = eq if cote == "moi" else opp
+        for r in df[(df.equipe == qui) & (df.action == act)].itertuples():
+            noms = [re.sub(r"^\d+\s*\.?\s*", "", l).upper() for l in r.labels]
+            k = sum(joueurs_equipe.get(nm) == eq for nm in noms)
+            if k != 1:
+                mn, sec = divmod(int(r.t), 60)
+                qui_coche = ", ".join(r.labels) or "aucun joueur"
+                out.append(f"ID {r.id} « {r.code} » ({mn:02d}:{sec:02d} vidéo) : {k} joueur(s) {eq} coché(s) ({qui_coche})")
+    return out
+
+
+def generer(xml_path, equipes, out_pdf, num_depart=1, team_stats=None, dossier_png=None, joueurs_equipe=None):
     """
     equipes : les 2 équipes du match (noms utilisés dans les catégories Nacsport).
     Renvoie dict(pdf, pages, erreurs, alertes, infos, png) ; lève XmlError si le XML est inutilisable.
@@ -384,7 +415,15 @@ def generer(xml_path, equipes, out_pdf, num_depart=1, team_stats=None, dossier_p
             for k, v in comptes(ajouter_pertes_adverses(df, equipes), eq).items():
                 ref = team_stats[eq].get(k)
                 if ref is not None and int(ref) != v:
-                    alertes.append(f"{eq} : {v} {LIBELLES[k]} dans le XML, {ref} dans la feuille brute")
+                    msg = f"{eq} : {v} {LIBELLES[k]} dans le XML, {ref} dans la feuille brute"
+                    if joueurs_equipe:
+                        opp = [e for e in equipes if e != eq][0]
+                        tags = suspects(df, eq, opp, k, joueurs_equipe)
+                        if tags:
+                            msg += ". Tag(s) en cause : " + " ; ".join(tags)
+                        else:
+                            msg += ". Aucun tag suspect dans le XML : vérifie que feuille brute et XML viennent du même export"
+                    alertes.append(msg)
     df, retires = dedoublonner_duels(df, equipes)
     infos = [f"Duel ID {i} retiré : doublon d'un duel {equipes[0]} au même moment" for i in retires]
     df = ajouter_pertes_adverses(df, equipes)

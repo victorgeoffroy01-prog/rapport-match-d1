@@ -176,6 +176,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
             pdf_cartes = os.path.join(tempfile.mkdtemp(), "cartes.pdf")
             infos_cartes.update(cartes.generer(xml_path, [team_a, team_b], pdf_cartes,
                                                num_depart=PAGES_AVANT_CARTES + 1, team_stats=team_stats,
+                                               joueurs_equipe={n: s["equipe"] for n, s in player_stats.items()},
                                                dossier_png=dossier_png))
         except XmlError as e:
             infos_cartes["erreur_xml"] = str(e)
