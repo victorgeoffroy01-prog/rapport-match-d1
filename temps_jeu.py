@@ -101,7 +101,7 @@ def page(pdf, num, tj, couleur):
     # colonnes (abscisses en fraction de page, alignement à droite)
     COLS = [("1re MT", 0.625), ("2e MT", 0.70), ("TOTAL", 0.785), ("ENTRÉES", 0.865), ("MOY.", 0.935)]
     yh = 0.80
-    C.nom_equipe(fig, 0.07, yh, tj["equipe"], couleur, fontsize=15, va="bottom")
+    C.nom_equipe(fig, 0.07, yh + 0.027, tj["equipe"], couleur, fontsize=20, va="center")
     for lab, x in COLS:
         fig.text(x, yh + 0.003, lab, fontproperties=C.POPB, fontsize=7, color=C.GRIS, ha="right", va="bottom")
     fig.add_artist(matplotlib.lines.Line2D([0.07, 0.935], [yh - 0.006, yh - 0.006], transform=fig.transFigure,

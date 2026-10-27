@@ -369,7 +369,7 @@ def page_momentum(pdf, num, val, buts, equipes):
         ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color(C.GRIS)
     ax.patch.set_alpha(0)
-    for j, yy in ((0, mx * 1.38), (1, -mx * 1.38)):
+    for j, yy in ((0, mx * 1.38), (1, -mx * 1.18)):
         xf, yf = fig.transFigure.inverted().transform(ax.transData.transform((0.3, yy)))
         C.nom_equipe(fig, xf, yf, equipes[j], C.COUL_EQ[j], fontsize=16, va="center")
     pdf.savefig(fig, facecolor=C.CREME)
