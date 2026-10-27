@@ -197,12 +197,26 @@ def official(team):
     return TEAM_NAME_MAP.get(team, team)
 
 
+def _eq(nom):
+    """Nom d'équipe comparable : majuscules, sans accents ni espaces en trop, EDF = FRANCE."""
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(nom or "")).encode("ascii", "ignore").decode().upper()
+    t = " ".join(t.split())
+    return {"EDF": "FRANCE", "EQUIPE DE FRANCE": "FRANCE"}.get(t, t)
+
+
+def _jr(v):
+    """Journée comparable : tirets longs ou courts, espaces et majuscules ignorés."""
+    t = str(v if v is not None else "").replace("\u2013", "-").replace("\u2014", "-").replace("\u2212", "-")
+    return " ".join(t.replace("-", " - ").split()).lower()
+
+
 def _same_journee(cell, wanted):
     if wanted is None:
         return True
     if cell == wanted:
         return True
-    return str(cell).strip().lower() == str(wanted).strip().lower()
+    return _jr(cell) == _jr(wanted)
 
 
 def resolve_journee(goals_db_path, team_a, team_b, journee=None):
@@ -220,11 +234,17 @@ def resolve_journee(goals_db_path, team_a, team_b, journee=None):
     for r in ws.iter_rows(min_row=2, values_only=True):
         if r[col["journee"]] is None:
             continue
-        if {r[col["equipe_domicile"]], r[col["equipe_exterieure"]]} == off and _same_journee(r[col["journee"]], journee):
+        if {_eq(r[col["equipe_domicile"]]), _eq(r[col["equipe_exterieure"]])} == {_eq(o) for o in off} \
+                and _same_journee(r[col["journee"]], journee):
             if r[col["journee"]] not in found:
                 found.append(r[col["journee"]])
     if not found:
-        raise GoalsDbError(f"Aucun but trouvé pour {team_a} vs {team_b} (journée : {journee or 'auto'}) dans la base buteurs.")
+        vus = sorted({f"{r[col['journee']]} : {r[col['equipe_domicile']]} - {r[col['equipe_exterieure']]}"
+                      for r in ws.iter_rows(min_row=2, values_only=True)
+                      if r[col["journee"]] is not None and ({_eq(r[col["equipe_domicile"]]), _eq(r[col["equipe_exterieure"]])}
+                                                           & {_eq(o) for o in off})})
+        raise GoalsDbError(f"Aucun but trouvé pour {team_a} vs {team_b} (journée : {journee or 'auto'}) dans la base "
+                           f"buteurs. Matchs de ces équipes dans la base : {'; '.join(vus) or 'aucun'}.")
     if len(found) > 1:
         raise GoalsDbError(f"Plusieurs matchs {team_a} vs {team_b} dans la base : {found}. Précise le match (journée).")
     return found[0]
@@ -280,8 +300,8 @@ def get_home_away(goals_db_path, team_a, team_b, journee):
         dom = ws.cell(row=r, column=col["equipe_domicile"] + 1).value
         ext = ws.cell(row=r, column=col["equipe_exterieure"] + 1).value
         jr = ws.cell(row=r, column=col["journee"] + 1).value
-        if _same_journee(jr, journee) and {dom, ext} == {off_a, off_b}:
-            return (team_a, team_b) if dom == off_a else (team_b, team_a)
+        if _same_journee(jr, journee) and {_eq(dom), _eq(ext)} == {_eq(off_a), _eq(off_b)}:
+            return (team_a, team_b) if _eq(dom) == _eq(off_a) else (team_b, team_a)
     return team_a, team_b
 
 
@@ -307,13 +327,13 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         if not _same_journee(row[col["journee"]], journee):
             continue
         dom, ext = row[col["equipe_domicile"]], row[col["equipe_exterieure"]]
-        if {dom, ext} != {off_a, off_b}:
+        if {_eq(dom), _eq(ext)} != {_eq(off_a), _eq(off_b)}:
             continue
         marque = row[col["equipe_marque"]]
         scorer_full = row[col["joueur"]]
         minute = row[col["minute"]]
         origine = ((row[col["origine_but"]] or "") if "origine_but" in col else "").strip()
-        team_short = team_a if marque == off_a else team_b
+        team_short = team_a if _eq(marque) == _eq(off_a) else team_b
         if not origine:
             origine = _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full) or ""
         candidates = players_a if team_short == team_a else players_b
