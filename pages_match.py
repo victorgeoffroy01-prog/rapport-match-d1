@@ -292,7 +292,7 @@ def page_entrees(pdf, num, data, equipes):
         col = C.COUL_EQ[equipes.index(e)]
         d = data[e]
         haut = 0.815 - j * bloc
-        fig.text(0.07, haut, e, fontproperties=C.PLAY, fontsize=17, color=col)
+        C.nom_equipe(fig, 0.07, haut, e, col)
         autres = d["possessions"] - d["total"]
         fig.text(0.07, haut - 0.022, f"{d['total']} possessions parties de notre moitié. Les {autres} autres "
                  "démarrent déjà dans le camp adverse\n(touches, corners, coups francs, récupérations hautes).",
@@ -369,15 +369,16 @@ def page_momentum(pdf, num, val, buts, equipes):
         ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color(C.GRIS)
     ax.patch.set_alpha(0)
-    ax.text(0.3, mx * 1.38, equipes[0], fontproperties=C.PLAY, fontsize=16, color=C.COUL_EQ[0], va="center")
-    ax.text(0.3, -mx * 1.38, equipes[1], fontproperties=C.PLAY, fontsize=16, color=C.COUL_EQ[1], va="center")
+    for j, yy in ((0, mx * 1.38), (1, -mx * 1.38)):
+        xf, yf = fig.transFigure.inverted().transform(ax.transData.transform((0.3, yy)))
+        C.nom_equipe(fig, xf, yf, equipes[j], C.COUL_EQ[j], fontsize=16, va="center")
     pdf.savefig(fig, facecolor=C.CREME)
     plt.close(fig)
 
 
 # ------------------------------------------------------------------ point d'entrée
 def generer(xml_path, equipes, pdf, num_depart, roster):
-    """Ajoute à `pdf` (PdfPages ouvert) les pages disponibles. Renvoie (nb pages, alertes, infos, plusminus)."""
+    """Ajoute à `pdf` (PdfPages ouvert) les pages disponibles. Renvoie (nb pages, alertes, infos, plusminus, buts_chrono)."""
     equipes = sorted(equipes, key=lambda e: e.upper() != "FRANCE")
     inst = _instances(xml_path)
     df = lire_xml(xml_path, equipes)
@@ -404,4 +405,7 @@ def generer(xml_path, equipes, pdf, num_depart, roster):
     # +/- par joueur, réutilisé par la page temps de jeu : {(équipe, NOM): (pour, contre, contre_connu)}
     plusminus = {(s["equipe"], s["nom"]): (s["pour"], s["contre"], s["contre_connu"])
                  for s in (terrain["stats"] if terrain else [])}
-    return n, alertes, infos, plusminus
+    buts_chrono = [(b["equipe"], b["minute"]) for b in (terrain["buts"] if terrain else []) if b["minute"] is not None]
+    if not buts_chrono and reperes:
+        buts_chrono = [(e, minute_jeu(t, reperes)) for e, t in zip(df[df.action == "But"].equipe, df[df.action == "But"].t)]
+    return n, alertes, infos, plusminus, buts_chrono

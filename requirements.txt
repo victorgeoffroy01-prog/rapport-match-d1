@@ -6,3 +6,4 @@ pypdf
 matplotlib
 pandas
 numpy
+pymupdf

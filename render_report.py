@@ -17,6 +17,8 @@ from pypdf import PdfReader, PdfWriter
 import cartes
 import pages_match
 import temps_jeu
+import logos
+import verification
 from matplotlib.backends.backend_pdf import PdfPages
 from nacsport_xml import XmlError
 
@@ -162,7 +164,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         "saison": match_info["saison"], "journee": match_info["journee"],
         "competition": match_info.get("competition", "D1 FUTSAL"),
         "buteurs_a": buteurs_a, "buteurs_b": buteurs_b,
-        "logo_a": match_info.get("logo_a"), "logo_b": match_info.get("logo_b"),
+        "logo_a": match_info.get("logo_a") or logos.uri(team_a), "logo_b": match_info.get("logo_b") or logos.uri(team_b),
         "stat_groups": build_stat_groups(team_stats, team_a, team_b),
         "joueurs_a": joueurs_a, "joueurs_b": joueurs_b,
         "gardiens_a": gardiens_a, "gardiens_b": gardiens_b,
@@ -177,6 +179,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
 
     # Temps de jeu (export de l'appli temps-de-jeu-d1) : page juste après la feuille de stats de l'équipe
     apres_tj = None
+    buts_chrono = None
     if tj_path:
         try:
             tj = temps_jeu.lire(tj_path)
@@ -214,7 +217,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     if xml_path and infos_cartes["pdf"]:
         pdf_extras = os.path.join(tempfile.mkdtemp(), "analyse.pdf")
         with PdfPages(pdf_extras) as pp_:
-            n, al, inf, _ = pages_match.generer(xml_path, [team_a, team_b], pp_,
+            n, al, inf, _, buts_chrono = pages_match.generer(xml_path, [team_a, team_b], pp_,
                                                 avant_cartes + 1 + infos_cartes["pages"], load_compo(compo_path))
         infos_cartes["alertes_tags"] += al
         infos_cartes["infos"] += inf
@@ -239,6 +242,12 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     alertes = controler(context)
     for a in alertes:
         print("⚠", a)
+
+    # Vérification finale du PDF assemblé (relu comme par un lecteur et par le site D1)
+    nb_pages = 5 + decal + infos_cartes["pages"] + infos_cartes["pages_extras"]
+    infos_cartes["verif_erreurs"], infos_cartes["verif_alertes"] = verification.verifier(
+        output_pdf, context, nb_pages, buts_chrono)
+    infos_cartes["nb_pages"] = nb_pages
     return output_pdf, alertes, infos_cartes
 
 

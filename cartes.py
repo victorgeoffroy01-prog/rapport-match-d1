@@ -24,6 +24,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Arc, Rectangle, FancyBboxPatch, Circle, Polygon
 from matplotlib.backends.backend_pdf import PdfPages
 from nacsport_xml import lire_xml, TIRS, XmlError
+import logos
 
 # --- Charte ---
 CREME, ENCRE, GRIS = "#F3F1EA", "#111111", "#8A8885"
@@ -105,6 +106,22 @@ def detail(d, cle):
         br = n(d, ["Ballon rendu"])
         txt = txt.replace("   ", f" (dont {br} {accord(br, 'ballons rendus')})   ", 1)
     return txt
+
+
+# ---------------------------------------------------------------- nom d'équipe + logo
+def nom_equipe(fig, x, y, eq, col, fontsize=17, va="baseline"):
+    """Logo de l'équipe (s'il existe dans logos/) puis son nom. (x, y) : début du texte comme fig.text."""
+    p = logos.chemin(eq)
+    dx = 0
+    if p:
+        taille = fontsize * 1.8 / 72 / fig.get_figheight()          # côté du logo en fraction de page
+        h_txt = fontsize * 0.72 / 72 / fig.get_figheight()          # hauteur des capitales
+        yc = {"baseline": y + h_txt / 2, "bottom": y + h_txt / 2, "center": y, "top": y - h_txt / 2}[va]
+        a = fig.add_axes([x, yc - taille / 2, taille, taille])
+        a.imshow(plt.imread(p))
+        a.axis("off")
+        dx = taille + 0.008
+    fig.text(x + dx, y, eq, fontproperties=PLAY, fontsize=fontsize, color=col, va=va)
 
 
 # ---------------------------------------------------------------- dessin
@@ -286,7 +303,7 @@ def page_rapport(pdf, num, fam, df, equipes, png=None):
         if fam.get("demi"):
             # 2 demi-terrains côte à côte, chiffres clés dessous
             x0 = 0.07 + k * 0.44
-            fig.text(x0, 0.765, eq, fontproperties=PLAY, fontsize=17, color=col)
+            nom_equipe(fig, x0, 0.765, eq, col)
             fig.text(x0, 0.748, detail(d, cle), fontproperties=POP, fontsize=7.5, color="#55534F", va="top")
             ax = fig.add_axes([x0 - 0.01, 0.255, 0.43, 0.47])
             tracer(ax, df, fam, equipes, eq)
@@ -297,8 +314,8 @@ def page_rapport(pdf, num, fam, df, equipes, png=None):
         else:
             # terrain sur toute la largeur utile, chiffres clés en colonne à droite
             haut = 0.775 - k * 0.36
-            fig.text(0.07, haut, eq, fontproperties=PLAY, fontsize=17, color=col)
-            fig.text(0.685, haut + 0.004, detail(d, cle), fontproperties=POP,
+            nom_equipe(fig, 0.07, haut, eq, col)
+            fig.text(0.93, haut + 0.004, detail(d, cle), fontproperties=POP,
                      fontsize=7.5, color="#55534F", ha="right")
             ax = fig.add_axes([0.055, haut - 0.33, 0.70, 0.32])
             ax.set_anchor("W")

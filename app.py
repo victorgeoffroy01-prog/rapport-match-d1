@@ -130,6 +130,15 @@ if res:
         st.info(info)
     if res["avec_xml"] and ic["pages"] and not (ic["erreurs"] or ic["alertes"] or ic.get("alertes_tags")):
         st.success("Cartes : chaque action a son point et les chiffres collent à la feuille brute.")
+    # Vérification finale : relecture complète du PDF
+    if ic.get("verif_erreurs"):
+        st.error(f"Vérification finale : {len(ic['verif_erreurs'])} problème(s) dans le PDF, à corriger avant "
+                 "publication :\n\n" + "\n".join(f"- {e}" for e in ic["verif_erreurs"]))
+    elif "verif_erreurs" in ic:
+        st.success(f"Vérification finale : {ic['nb_pages']} pages relues, numérotation, chiffres et lecture "
+                   "par le site D1 conformes.")
+    if ic.get("verif_alertes"):
+        st.warning("À vérifier :\n\n" + "\n".join(f"- {e}" for e in ic["verif_alertes"]))
     # Nom : J01_LAVAL-NICE (domicile-extérieur)
     st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")
     if res["zip"]:
