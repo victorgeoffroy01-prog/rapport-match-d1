@@ -16,6 +16,7 @@ import tempfile
 from pypdf import PdfReader, PdfWriter
 import cartes
 import pages_match
+import temps_jeu
 from matplotlib.backends.backend_pdf import PdfPages
 from nacsport_xml import XmlError
 
@@ -123,7 +124,7 @@ def build_stat_groups(team_stats, team_a, team_b):
 
 
 def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, journee_num=None,
-           xml_path=None, dossier_png=None):
+           xml_path=None, dossier_png=None, tj_path=None):
     """
     match_info attend les clés éditoriales manuelles :
     saison, journee (texte affiché), hook_text, verdict_html, factor_1 {titre, texte},
@@ -171,26 +172,53 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         "prochain_logo_b": match_info.get("prochain_logo_b"),
     }
 
+    infos_cartes = dict(pdf=None, pages=0, erreurs=[], alertes=[], infos=[], png=[], erreur_xml=None,
+                        pdf_extras=None, pages_extras=0, alertes_tags=[], erreur_tj=None, pdf_tj=None)
+
+    # Temps de jeu (export de l'appli temps-de-jeu-d1) : page juste après la feuille de stats de l'équipe
+    apres_tj = None
+    if tj_path:
+        try:
+            tj = temps_jeu.lire(tj_path)
+            if tj["equipe"] not in (team_a, team_b):
+                raise temps_jeu.TempsJeuError(f"équipe « {tj['equipe']} » du fichier absente du match "
+                                              f"({team_a} - {team_b})")
+            joueurs_eq = {n_ for n_, s in player_stats.items() if s["equipe"] == tj["equipe"]}
+            for j in tj["joueurs"]:
+                if j["total"] and j["nom"] not in joueurs_eq:
+                    tj["alertes"].append(f"Temps de jeu : {j['nom']} n'a aucune colonne dans la feuille brute")
+            apres_tj = 3 if tj["equipe"] == team_a else 4          # page 03 = équipe A, 04 = équipe B
+            couleur = cartes.COUL_EQ[sorted([team_a, team_b], key=lambda e: e.upper() != "FRANCE").index(tj["equipe"])]
+            infos_cartes["pdf_tj"] = os.path.join(tempfile.mkdtemp(), "temps_jeu.pdf")
+            with PdfPages(infos_cartes["pdf_tj"]) as pp_:
+                temps_jeu.page(pp_, apres_tj + 1, tj, couleur)
+            infos_cartes["alertes_tags"] += tj["alertes"]
+        except temps_jeu.TempsJeuError as e:
+            infos_cartes["erreur_tj"] = str(e)
+    decal = 1 if apres_tj else 0
+    context["num_b"] = f"{4 + (decal if apres_tj == 3 else 0):02d}"
+    context["num_gk"] = f"{5 + decal:02d}"
+    avant_cartes = PAGES_AVANT_CARTES + decal
+
     # Cartes de terrain (optionnel), numérotées à la suite de la page gardiens
-    infos_cartes = dict(pdf=None, pages=0, erreurs=[], alertes=[], infos=[], png=[], erreur_xml=None)
     if xml_path:
         try:
             pdf_cartes = os.path.join(tempfile.mkdtemp(), "cartes.pdf")
             infos_cartes.update(cartes.generer(xml_path, [team_a, team_b], pdf_cartes,
-                                               num_depart=PAGES_AVANT_CARTES + 1, team_stats=team_stats,
+                                               num_depart=avant_cartes + 1, team_stats=team_stats,
                                                joueurs_equipe={n: s["equipe"] for n, s in player_stats.items()},
                                                dossier_png=dossier_png))
         except XmlError as e:
             infos_cartes["erreur_xml"] = str(e)
     # Pages d'analyse (joueurs sur le terrain aux buts, entrées dans la moitié adverse, momentum)
-    infos_cartes.update(pdf_extras=None, pages_extras=0, alertes_tags=[])
     if xml_path and infos_cartes["pdf"]:
         pdf_extras = os.path.join(tempfile.mkdtemp(), "analyse.pdf")
         with PdfPages(pdf_extras) as pp_:
-            n, al, inf = pages_match.generer(xml_path, [team_a, team_b], pp_,
-                                             PAGES_AVANT_CARTES + 1 + infos_cartes["pages"], load_compo(compo_path))
-        infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n, alertes_tags=al)
+            n, al, inf, _ = pages_match.generer(xml_path, [team_a, team_b], pp_,
+                                                avant_cartes + 1 + infos_cartes["pages"], load_compo(compo_path))
+        infos_cartes["alertes_tags"] += al
         infos_cartes["infos"] += inf
+        infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n)
 
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = jinja2.Template(f.read())
@@ -201,10 +229,12 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
 
     HTML(string=html_out, base_url=".").write_pdf(output_pdf)
 
+    if infos_cartes["pdf_tj"]:
+        inserer_pages(output_pdf, infos_cartes["pdf_tj"], apres=apres_tj)
     if infos_cartes["pdf"]:
-        inserer_pages(output_pdf, infos_cartes["pdf"], apres=PAGES_AVANT_CARTES)
+        inserer_pages(output_pdf, infos_cartes["pdf"], apres=avant_cartes)
     if infos_cartes["pdf_extras"]:
-        inserer_pages(output_pdf, infos_cartes["pdf_extras"], apres=PAGES_AVANT_CARTES + infos_cartes["pages"])
+        inserer_pages(output_pdf, infos_cartes["pdf_extras"], apres=avant_cartes + infos_cartes["pages"])
 
     alertes = controler(context)
     for a in alertes:

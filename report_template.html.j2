@@ -227,7 +227,7 @@
       {% endfor %}
     </tbody>
   </table>
-  <div class="footer"><span class="cap">{{ pl(joueurs_b|length, 'joueur de champ', 'joueurs de champ') }} + {{ pl(gardiens_b|length, 'gardien', 'gardiens') }} (voir page gardiens)</span><span class="pg">04</span></div>
+  <div class="footer"><span class="cap">{{ pl(joueurs_b|length, 'joueur de champ', 'joueurs de champ') }} + {{ pl(gardiens_b|length, 'gardien', 'gardiens') }} (voir page gardiens)</span><span class="pg">{{ num_b }}</span></div>
 </div>
 <!-- PAGE 5 : GARDIENS -->
 <div class="card{% if gardiens_a|length > 1 or gardiens_b|length > 1 %} gk-compact{% endif %}">
@@ -276,7 +276,7 @@
       {% endfor %}
     </div>
   </div>
-  <div class="footer"><span class="cap">Les gardiens</span><span class="pg">05</span></div>
+  <div class="footer"><span class="cap">Les gardiens</span><span class="pg">{{ num_gk }}</span></div>
 </div>
 
 </div>

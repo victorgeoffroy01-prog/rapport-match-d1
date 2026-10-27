@@ -377,7 +377,7 @@ def page_momentum(pdf, num, val, buts, equipes):
 
 # ------------------------------------------------------------------ point d'entrée
 def generer(xml_path, equipes, pdf, num_depart, roster):
-    """Ajoute à `pdf` (PdfPages ouvert) les pages disponibles. Renvoie (nb pages, alertes, infos, minutes_buts)."""
+    """Ajoute à `pdf` (PdfPages ouvert) les pages disponibles. Renvoie (nb pages, alertes, infos, plusminus)."""
     equipes = sorted(equipes, key=lambda e: e.upper() != "FRANCE")
     inst = _instances(xml_path)
     df = lire_xml(xml_path, equipes)
@@ -401,4 +401,7 @@ def generer(xml_path, equipes, pdf, num_depart, roster):
         val, buts = momentum(df, equipes, reperes, inst)
         page_momentum(pdf, num_depart + n, val, buts, equipes)
         n += 1
-    return n, alertes, infos
+    # +/- par joueur, réutilisé par la page temps de jeu : {(équipe, NOM): (pour, contre, contre_connu)}
+    plusminus = {(s["equipe"], s["nom"]): (s["pour"], s["contre"], s["contre_connu"])
+                 for s in (terrain["stats"] if terrain else [])}
+    return n, alertes, infos, plusminus

@@ -24,6 +24,8 @@ with col3:
     goals_file = st.file_uploader("Base des buteurs", type=["xlsx"])
 xml_file = st.file_uploader("Export XML Nacsport (positions sur le terrain) : optionnel, ajoute les cartes",
                             type=["xml"])
+tj_file = st.file_uploader("Temps de jeu (export de l'appli) : optionnel, ajoute la page temps de jeu",
+                           type=["xlsx"])
 
 mode = st.radio("Compétition", ["D1 Futsal", "Équipe de France"], horizontal=True)
 c1, c2 = st.columns(2)
@@ -65,6 +67,11 @@ if generer:
             xml_path = os.path.join(tmp, "positions.xml")
             with open(xml_path, "wb") as f:
                 f.write(xml_file.getbuffer())
+        tj_path = None
+        if tj_file:
+            tj_path = os.path.join(tmp, "temps_jeu.xlsx")
+            with open(tj_path, "wb") as f:
+                f.write(tj_file.getbuffer())
         dossier_png = os.path.join(tmp, "cartes_png")
         os.makedirs(dossier_png)
 
@@ -75,7 +82,7 @@ if generer:
             with st.spinner("Génération en cours..."):
                 _, alertes, ic = render(raw_path, compo_path, match_info, output_pdf,
                                         goals_db_path=goals_path, journee_num=journee_in,
-                                        xml_path=xml_path, dossier_png=dossier_png)
+                                        xml_path=xml_path, dossier_png=dossier_png, tj_path=tj_path)
             with open(output_pdf, "rb") as f:
                 pdf_bytes = f.read()
             zip_bytes = None
@@ -102,8 +109,10 @@ if generer:
 res = st.session_state.get("resultat")
 if res:
     ic = res["cartes"]
-    n_xml = ic["pages"] + ic.get("pages_extras", 0)
-    st.success("Rapport généré." + (f" {n_xml} pages tirées du XML ajoutées." if n_xml else ""))
+    n_xml = ic["pages"] + ic.get("pages_extras", 0) + (1 if ic.get("pdf_tj") else 0)
+    st.success("Rapport généré." + (f" {n_xml} pages d'analyse ajoutées." if n_xml else ""))
+    if ic.get("erreur_tj"):
+        st.error("Page temps de jeu non ajoutée :\n\n" + ic["erreur_tj"])
     # Contrôles : feuille brute, puis cartes
     for al in res["alertes"]:
         st.warning(al)
