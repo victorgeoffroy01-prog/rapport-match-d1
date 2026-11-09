@@ -332,6 +332,15 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         marque = row[col["equipe_marque"]]
         scorer_full = row[col["joueur"]]
         minute = row[col["minute"]]
+        if (scorer_full is None or str(scorer_full).strip() == "") and (minute is None or str(minute).strip() == ""):
+            continue  # ligne préparée mais pas encore remplie (pas de but)
+        if scorer_full is None or str(scorer_full).strip() == "":
+            raise GoalsDbError(f"Base buteurs, ligne {r} : but à la {minute}' sans buteur (colonne « joueur » vide). "
+                               "Mets le nom du buteur, ou CSC pour un but contre son camp.")
+        if marque is None or str(marque).strip() == "":
+            raise GoalsDbError(f"Base buteurs, ligne {r} : but de {scorer_full} à la {minute}' sans équipe "
+                               "(colonne « equipe_marque » vide).")
+        scorer_full = str(scorer_full).strip()
         origine = ((row[col["origine_but"]] or "") if "origine_but" in col else "").strip()
         team_short = team_a if _eq(marque) == _eq(off_a) else team_b
         if not origine:

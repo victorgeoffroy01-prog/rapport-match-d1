@@ -104,7 +104,11 @@ if generer:
             st.error("Problème avec la base des buteurs :\n\n" + str(e))
         except Exception as e:
             st.session_state.pop("resultat", None)
-            st.error(f"Erreur inattendue : {e}")
+            # où l'erreur s'est produite (fichier et ligne du générateur), pour la corriger vite
+            import traceback
+            pile = [f for f in traceback.extract_tb(e.__traceback__) if "site-packages" not in f.filename]
+            ou = f" ({os.path.basename(pile[-1].filename)}, ligne {pile[-1].lineno})" if pile else ""
+            st.error(f"Erreur inattendue : {e}{ou}")
 
 res = st.session_state.get("resultat")
 if res:
