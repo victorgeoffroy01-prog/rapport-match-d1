@@ -266,16 +266,18 @@ def inserer_pages(pdf_rapport, pdf_insert, apres):
     base, ins = PdfReader(pdf_rapport), PdfReader(pdf_insert)
     larg, haut = float(base.pages[0].mediabox.width), float(base.pages[0].mediabox.height)
     w = PdfWriter()
+
+    def ajouter_insert():
+        for q in ins.pages:
+            # pypdf 7 : la page doit d'abord appartenir au writer avant d'être redimensionnée
+            w.add_page(q).scale_to(larg, haut)
+
     for i, p in enumerate(base.pages):
         if i == apres:
-            for q in ins.pages:
-                q.scale_to(larg, haut)
-                w.add_page(q)
+            ajouter_insert()
         w.add_page(p)
     if apres >= len(base.pages):
-        for q in ins.pages:
-            q.scale_to(larg, haut)
-            w.add_page(q)
+        ajouter_insert()
     with open(pdf_rapport, "wb") as f:
         w.write(f)
 
