@@ -135,6 +135,12 @@ def sur_le_terrain(inst, equipes, roster, reperes):
                     presents[e].append(nom)
                 else:
                     alertes.append(f"But ID {i['id']} : « {txt} » ne correspond à aucun joueur de la compo")
+        for txt, _ in i["labels"]:
+            if txt and not txt.upper().startswith("T_"):
+                e, nom = _joueur_T("T_" + txt, roster)
+                gk = e and any(p["nom"] == nom and p.get("gardien") for p in roster.get(e, []))
+                if gk and e != eq and presents[e] and nom not in presents[e]:
+                    presents[e].append(nom)   # gardien qui encaisse, coché sans T_
         buteur = next((re.sub(r"^\d+\s*\.?\s*", "", t).upper() for t, _ in i["labels"]
                        if not t.upper().startswith("T_") and
                        any(p["nom"] == re.sub(r"^\d+\s*\.?\s*", "", t).upper() for p in roster.get(eq, []))), None)
@@ -264,10 +270,13 @@ def page_terrain(pdf, num, data, equipes):
         fig.text(0.07, y, _min_txt(b["minute"], b["equipe"]), fontproperties=C.PLAY, fontsize=20, color=c, va="center")
         fig.text(0.155, y + 0.019, (b["buteur"] or "?") + f"  ·  {b['equipe']}", fontproperties=C.POPB,
                  fontsize=10, color=C.ENCRE, va="center")
-        pres = b["presents"][b["equipe"]]
+        eq_pres = b["equipe"] if b["presents"][b["equipe"]] else \
+            next((e for e in equipes if b["presents"][e]), b["equipe"])
+        pres = b["presents"][eq_pres]
         champ = [p for p in pres if p not in data["gardiens"]]
         gk = [p for p in pres if p in data["gardiens"]]
-        l1 = "  ".join(champ[:2]) if pres else "joueurs non cochés"
+        prefixe = f"{eq_pres} : " if eq_pres != b["equipe"] else ""   # but encaissé : nos joueurs présents
+        l1 = prefixe + "  ".join(champ[:2]) if pres else "joueurs non cochés"
         l2 = "  ".join(champ[2:]) + (f"  ·  GB {gk[0]}" if gk else "")
         fig.text(0.155, y - 0.004, l1, fontproperties=C.POPS, fontsize=8.5, color="#3A3936", va="center")
         fig.text(0.155, y - 0.026, l2, fontproperties=C.POPS, fontsize=8.5, color="#3A3936", va="center")
@@ -337,11 +346,14 @@ def page_entrees(pdf, num, data, equipes):
         # chiffres clés sous le terrain
         fav = max(COULOIRS, key=lambda c: d["lignes"].get(c, {}).get("n", 0))
         items = [("Entrées camp adverse", f"{d['total'] - s_['n']}/{d['total']}"), ("Couloir favori", fav)]
-        yk = haut - 0.06 - h_terrain - 0.07
+        ax.apply_aspect()
+        pos = ax.get_position()
+        yk = pos.y0 - 0.06
         for i, (lab, val) in enumerate(items):
-            xx = 0.07 + i * 0.30
-            fig.text(xx, yk, str(val), fontproperties=C.PLAY, fontsize=21, color=col)
-            fig.text(xx, yk - 0.022, lab.upper(), fontproperties=C.POPS, fontsize=7, color="#55534F")
+            xx = pos.x0 + pos.width * (0.30 if i == 0 else 0.70)
+            fig.text(xx, yk, str(val), fontproperties=C.PLAY, fontsize=21, color=col, ha="center")
+            fig.text(xx, yk - 0.022, lab.upper(), fontproperties=C.POPS, fontsize=7, color="#55534F",
+                     ha="center")
     fig.text(0.07, 0.09, "Couloir où le ballon franchit la ligne médiane, une fois par possession",
              fontproperties=C.POP, fontsize=6.5, color=C.GRIS)
     pdf.savefig(fig, facecolor=C.CREME)

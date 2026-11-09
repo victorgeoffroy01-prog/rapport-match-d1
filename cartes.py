@@ -308,10 +308,15 @@ def page_rapport(pdf, num, fam, df, equipes, png=None):
             fig.text(x0, 0.748, detail(d, cle), fontproperties=POP, fontsize=7.5, color="#55534F", va="top")
             ax = fig.add_axes([x0 - 0.01, 0.255, 0.43, 0.47])
             tracer(ax, df, fam, equipes, eq)
+            # chiffres clés juste sous le terrain réellement dessiné, centrés sur chaque moitié
+            ax.apply_aspect()
+            pos = ax.get_position()
             for i, (lab, val) in enumerate(chiffres_cles(d, cle)):
-                xx, yy = x0 + (i % 2) * 0.2, 0.19 - (i // 2) * 0.075
-                fig.text(xx, yy, str(val), fontproperties=PLAY, fontsize=21, color=col)
-                fig.text(xx, yy - 0.02, lab.upper(), fontproperties=POPS, fontsize=7, color="#55534F")
+                xx = pos.x0 + pos.width * (0.25 if i % 2 == 0 else 0.75)
+                yy = pos.y0 - 0.055 - (i // 2) * 0.075
+                fig.text(xx, yy, str(val), fontproperties=PLAY, fontsize=21, color=col, ha="center")
+                fig.text(xx, yy - 0.022, lab.upper(), fontproperties=POPS, fontsize=7, color="#55534F",
+                         ha="center")
         else:
             # terrain sur toute la largeur utile, chiffres clés en colonne à droite
             haut = 0.775 - k * 0.36

@@ -37,20 +37,20 @@
   .footer .pg{ font-weight:800; font-size:16px; }
 
   /* ===== PAGE 1 : COVER ===== */
-  .logos-row{ display:flex; align-items:center; justify-content:center; gap:46px; margin:12px 0 10px; }
-  .logo-slot{ width:118px; height:118px; border-radius:10px; display:flex;
-    align-items:center; justify-content:center; text-align:center; font-size:9px; color:var(--gray);
-    font-weight:700; flex-shrink:0; }
-  .logo-slot img{ width:118px; height:118px; object-fit:contain; }
-  .score-hero{ text-align:center; }
-  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:104px; line-height:1; }
-  .teams-row{ display:flex; justify-content:space-around; font-family:'Playfair Display','Lora',serif;
-    font-weight:800; font-size:48px; color:var(--ink); margin-bottom:18px; }
-  .scorers{ display:flex; gap:18px; margin:10px 0 6px; }
-  .scorers .col{ flex:1; }
+  .hero{ position:relative; display:flex; margin:34px 0 38px; }
+  .hero .team{ width:50%; text-align:center; }
+  .logo-slot{ width:118px; height:96px; margin:0 auto 14px; display:flex; align-items:center; justify-content:center; }
+  .logo-slot img{ width:118px; height:96px; object-fit:contain; }
+  .hero .tname{ font-family:'Playfair Display','Lora',serif; font-weight:800; line-height:1; color:var(--ink); white-space:nowrap; }
+  .score-hero{ position:absolute; left:0; right:0; top:0; height:96px; text-align:center; }
+  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:72px; line-height:96px; white-space:nowrap; }
+  .score-hero .sep{ color:var(--red); margin:0 12px; }
+  .scorers{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:18px; margin:10px 0 6px; }
+  .scorers .col{ text-align:center; }
+  .scorers .liste{ display:inline-block; text-align:left; }
   .scorers .col h6{ margin:0 0 10px; font-size:17px; font-weight:800; letter-spacing:.3px; color:var(--ink); font-family:'Playfair Display','Lora',serif; }
-  .scorers .goal{ display:flex; gap:12px; font-size:19px; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
-  .scorers .goal .min{ font-weight:700; width:36px; }
+  .scorers .goal{ display:flex; gap:12px; font-size:19px; white-space:nowrap; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
+  .scorers .goal .min{ font-weight:700; flex:0 0 40px; }
   .byline{ text-align:right; color:var(--red); font-weight:800; font-size:14px; margin-top:8mm; }
   /* ===== PAGE 2 : STATS COLLECTIVES ===== */
   .stat-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
@@ -157,22 +157,33 @@
 <div class="card">
   <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - {{ competition | upper }}</div>
   <hr class="rule">
-  <div class="logos-row">
-    {% if logo_a %}<div class="logo-slot"><img src="{{ logo_a }}"></div>{% endif %}
-    <div class="score-hero"><div class="digits">{{ score_a }} <span style="color:var(--red);">—</span> {{ score_b }}</div></div>
-    {% if logo_b %}<div class="logo-slot"><img src="{{ logo_b }}"></div>{% endif %}
-  </div>
-  <div class="teams-row"><span>{{ team_a }}</span><span>{{ team_b }}</span></div>
-  <div class="scorers">
-    <div class="col a">
-      <h6>BUTEURS {{ team_a }}</h6>
-      {% for g in buteurs_a %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
-      {% endfor %}
+  {% set lg = [team_a|length, team_b|length]|max %}
+  {% set tsize = 44 if lg <= 8 else (36 if lg <= 11 else 28) %}
+  <div class="hero">
+    <div class="team">
+      <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% endif %}</div>
+      <div class="tname" style="font-size:{{ tsize }}px;">{{ team_a }}</div>
     </div>
-    <div class="col b">
-      <h6>BUTEURS {{ team_b }}</h6>
-      {% for g in buteurs_b %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
-      {% endfor %}
+    <div class="team">
+      <div class="logo-slot">{% if logo_b %}<img src="{{ logo_b }}">{% endif %}</div>
+      <div class="tname" style="font-size:{{ tsize }}px;">{{ team_b }}</div>
+    </div>
+    <div class="score-hero"><div class="digits">{{ score_a }}<span class="sep">—</span>{{ score_b }}</div></div>
+  </div>
+  <div class="scorers">
+    <div class="col">
+      <div class="liste">
+        <h6>BUTEURS {{ team_a }}</h6>
+        {% for g in buteurs_a %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col">
+      <div class="liste">
+        <h6>BUTEURS {{ team_b }}</h6>
+        {% for g in buteurs_b %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
+        {% endfor %}
+      </div>
     </div>
   </div>
   <div class="byline">fait par Victor GEOFFROY</div>
