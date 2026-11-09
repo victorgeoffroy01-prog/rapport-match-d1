@@ -54,8 +54,16 @@ def _equipe(code, equipes):
 def chrono(inst):
     """Repères (temps vidéo, minute de jeu) : début de période + descripteurs 02..20 / 22..40."""
     reperes, infos = [], []
+    t2 = next((i["t"] for i in inst if i["code"].lower().startswith("debut 2")), None)
     for i in inst:
         low = i["code"].lower()
+        # repère posé comme catégorie à part (bouton « 02 », « 04 »... dans Nacsport)
+        if low.strip().isdigit():
+            m = int(low)
+            if t2 is not None and i["t"] >= t2 and m <= 20:
+                m += 20
+            reperes.append((i["t"], m))
+            continue
         if not low.startswith("debut"):
             continue
         mt2 = low.startswith("debut 2")
@@ -69,7 +77,7 @@ def chrono(inst):
                 reperes.append((ct, m))
     reperes.sort()
     if len(reperes) < 3:
-        return None, ["Momentum : aucun repère de chrono (02, 04...) sur les tags de début de période."]
+        return None, ["Momentum : aucun repère de chrono (02, 04...) dans le XML."]
     for (t0, m0), (t1, m1) in zip(reperes, reperes[1:]):
         if m1 <= m0 and not (m0 == 20 and m1 == 20):
             infos.append(f"Momentum : repère {m1:02d}' placé avant ou au même moment que {m0:02d}' : à vérifier.")
@@ -232,8 +240,16 @@ def _fig(num, kicker, titre):
     return fig
 
 
-def _min_txt(m):
-    return f"{int(m) + 1}'" if m is not None else ""
+_BASE = {}   # minutes de la base buteurs par équipe, pour afficher la même minute qu'en couverture
+
+
+def _min_txt(m, e=None):
+    """Minute affichée : celle de la base buteurs si elle est à 1' près du chrono, sinon le chrono."""
+    if m is None:
+        return ""
+    mc = int(m) + 1
+    proches = [mb for mb in _BASE.get(e, []) if abs(mb - mc) <= 1]
+    return f"{min(proches, key=lambda mb: abs(mb - mc)) if proches else mc}'"
 
 
 def page_terrain(pdf, num, data, equipes):
@@ -245,7 +261,7 @@ def page_terrain(pdf, num, data, equipes):
     pas = min(0.105, 0.66 / max(1, len(data["buts"])))
     for b in data["buts"]:
         c = col[b["equipe"]]
-        fig.text(0.07, y, _min_txt(b["minute"]), fontproperties=C.PLAY, fontsize=20, color=c, va="center")
+        fig.text(0.07, y, _min_txt(b["minute"], b["equipe"]), fontproperties=C.PLAY, fontsize=20, color=c, va="center")
         fig.text(0.155, y + 0.019, (b["buteur"] or "?") + f"  ·  {b['equipe']}", fontproperties=C.POPB,
                  fontsize=10, color=C.ENCRE, va="center")
         pres = b["presents"][b["equipe"]]
@@ -360,7 +376,7 @@ def page_momentum(pdf, num, val, buts, equipes):
         yb = sg * h
         ax.scatter([xb], [yb], s=120, c="white", edgecolors=C.ENCRE, linewidths=0.9, zorder=6)
         ax.scatter([xb], [yb], marker="p", s=28, c=C.ENCRE, zorder=7)
-        ax.text(xb, yb + sg * mx * 0.11, _min_txt(m), fontproperties=C.POPB, fontsize=7, color=C.COUL_EQ[j],
+        ax.text(xb, yb + sg * mx * 0.11, _min_txt(m, e), fontproperties=C.POPB, fontsize=7, color=C.COUL_EQ[j],
                 ha="center", va="center")
     ax.set_xticks(range(0, 41, 4))
     ax.set_xticklabels([f"{m}'" for m in range(0, 41, 4)], fontproperties=C.POP, fontsize=7.5)
@@ -377,9 +393,11 @@ def page_momentum(pdf, num, val, buts, equipes):
 
 
 # ------------------------------------------------------------------ point d'entrée
-def generer(xml_path, equipes, pdf, num_depart, roster):
+def generer(xml_path, equipes, pdf, num_depart, roster, minutes_base=None):
     """Ajoute à `pdf` (PdfPages ouvert) les pages disponibles. Renvoie (nb pages, alertes, infos, plusminus, buts_chrono)."""
     equipes = sorted(equipes, key=lambda e: e.upper() != "FRANCE")
+    _BASE.clear()
+    _BASE.update(minutes_base or {})
     inst = _instances(xml_path)
     df = lire_xml(xml_path, equipes)
     reperes, infos = chrono(inst)

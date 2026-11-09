@@ -187,6 +187,14 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
                 raise temps_jeu.TempsJeuError(f"équipe « {tj['equipe']} » du fichier absente du match "
                                               f"({team_a} - {team_b})")
             joueurs_eq = {n_ for n_, s in player_stats.items() if s["equipe"] == tj["equipe"]}
+            # orthographe différente (GUEDDOURA / GUEDDOURRA) : on rattache par le numéro de la compo
+            par_num = {str(p["numero"]): p["nom"] for p in load_compo(compo_path).get(tj["equipe"], [])
+                       if p["nom"] in joueurs_eq}
+            for j in tj["joueurs"]:
+                if j["nom"] not in joueurs_eq and par_num.get(j["num"]):
+                    tj["alertes"].append(f"Temps de jeu : {j['nom']} (n°{j['num']}) écrit {par_num[j['num']]} "
+                                         "dans la compo, rattaché par le numéro")
+                    j["nom"] = par_num[j["num"]]
             for j in tj["joueurs"]:
                 if j["total"] and j["nom"] not in joueurs_eq:
                     tj["alertes"].append(f"Temps de jeu : {j['nom']} n'a aucune colonne dans la feuille brute")
@@ -218,7 +226,9 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         pdf_extras = os.path.join(tempfile.mkdtemp(), "analyse.pdf")
         with PdfPages(pdf_extras) as pp_:
             n, al, inf, _, buts_chrono = pages_match.generer(xml_path, [team_a, team_b], pp_,
-                                                avant_cartes + 1 + infos_cartes["pages"], load_compo(compo_path))
+                                                avant_cartes + 1 + infos_cartes["pages"], load_compo(compo_path),
+                                                minutes_base={t: [int(str(b["minute"]).rstrip("'")) for b in bb]
+                                                              for t, bb in ((team_a, buteurs_a), (team_b, buteurs_b))})
         infos_cartes["alertes_tags"] += al
         infos_cartes["infos"] += inf
         infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n)
