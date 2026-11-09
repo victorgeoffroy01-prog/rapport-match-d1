@@ -70,8 +70,7 @@ def lire(path):
             # Numéro et Nom vides mais Code rempli (« 10.MOHAMMED ») : on les reprend du code
             m = re.fullmatch(r"(\d+)\s*\.?\s*(.+)", code)
             if m:
-                num, nom = num or m.group(1), m.group(2)
-                alertes.append(f"Temps de jeu : ligne « {code} » sans Numéro/Nom, repris du Code")
+                num, nom = num or m.group(1), m.group(2)   # repris sans alerte : le Code suffit
         if nom is None:
             continue
         j = dict(num=str(num).strip(), nom=str(nom).strip().upper(),
