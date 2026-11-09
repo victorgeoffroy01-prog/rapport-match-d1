@@ -15,6 +15,7 @@ import os
 import sys
 import re
 import numpy as np
+from PIL import Image
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
@@ -118,7 +119,7 @@ def nom_equipe(fig, x, y, eq, col, fontsize=17, va="baseline"):
         h_txt = fontsize * 0.72 / 72 / fig.get_figheight()          # hauteur des capitales
         yc = {"baseline": y + h_txt / 2, "bottom": y + h_txt / 2, "center": y, "top": y - h_txt / 2}[va]
         a = fig.add_axes([x, yc - taille / 2, taille, taille])
-        a.imshow(plt.imread(p))
+        a.imshow(np.asarray(Image.open(p).convert("RGBA")))   # accepte aussi un JPG renommé en .png
         a.axis("off")
         dx = taille + 0.008
     fig.text(x + dx, y, eq, fontproperties=PLAY, fontsize=fontsize, color=col, va=va)
