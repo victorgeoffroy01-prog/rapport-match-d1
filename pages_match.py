@@ -139,11 +139,12 @@ def sur_le_terrain(inst, equipes, roster, reperes):
             if txt and not txt.upper().startswith("T_"):
                 e, nom = _joueur_T("T_" + txt, roster)
                 gk = e and any(p["nom"] == nom and p.get("gardien") for p in roster.get(e, []))
-                if gk and e != eq and presents[e] and nom not in presents[e]:
-                    presents[e].append(nom)   # gardien qui encaisse, coché sans T_
+                if gk and presents[e] and nom not in presents[e]:
+                    presents[e].append(nom)   # gardien coché sans T_ (« 1.LOKOKA ») : compté sur le terrain
         buteur = next((re.sub(r"^\d+\s*\.?\s*", "", t).upper() for t, _ in i["labels"]
                        if not t.upper().startswith("T_") and
-                       any(p["nom"] == re.sub(r"^\d+\s*\.?\s*", "", t).upper() for p in roster.get(eq, []))), None)
+                       any(p["nom"] == re.sub(r"^\d+\s*\.?\s*", "", t).upper() and not p.get("gardien")
+                           for p in roster.get(eq, []))), None)
         mn = minute_jeu(i["t"], reperes) if reperes else None
         buts.append(dict(id=i["id"], t=i["t"], equipe=eq, buteur=buteur, minute=mn, presents=presents))
         n = len(presents[eq])
