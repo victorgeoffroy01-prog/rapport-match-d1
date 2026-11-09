@@ -6,10 +6,11 @@ Repère de sortie (en mètres, terrain futsal 40 x 20), propre à l'équipe qui 
   - X : 0 = couloir gauche, 20 = couloir droit (vu depuis l'équipe qui attaque)
 
 Règles de tag à respecter dans Nacsport :
-  - terrain futsal vertical du "Descripteur graphique", clic à l'endroit vu à l'écran (pas d'inversion de tête)
+  - terrain futsal vertical du "Descripteur graphique"
   - une catégorie "Debut 1ere MT" et une catégorie "Debut 2eme MT" posées au coup d'envoi de chaque période
   - catégories nommées "<Action> <EQUIPE>" (ex. "Tir Cadre FRANCE"), joueurs en descripteurs "9. NOM"
-Le sens de jeu de la 1re MT est déduit automatiquement de la position des tirs.
+Le sens de jeu est déduit des tirs pour chaque mi-temps : on peut cliquer tel que vu à l'écran (les équipes
+changent de côté à la pause) ou garder la même équipe toujours dans le même sens, les deux marchent.
 """
 import re
 import unicodedata
@@ -84,25 +85,33 @@ def lire_xml(path, equipes):
         df.loc[df.t < t1, "mt"] = 0  # avant le coup d'envoi : ignoré
         df = df[df.mt > 0]
 
-    bas = sens_premiere_mt(df, equipes)
+    # sens de jeu déduit des tirs, mi-temps par mi-temps : marche que l'EDF change de côté à l'écran
+    # à la pause (clic tel que vu) ou qu'elle attaque toujours dans le même sens (clic remis à l'endroit)
+    bas1 = sens_mi_temps(df, equipes, 1)
+    bas2 = sens_mi_temps(df, equipes, 2, defaut=[e for e in equipes if e != bas1][0])
     P = PITCH
     u = (df.px - P["left"]) / (P["right"] - P["left"])   # 0..1 gauche -> droite écran
     v = (df.py - P["top"]) / (P["bottom"] - P["top"])    # 0..1 haut -> bas écran
-    vers_bas = (df.equipe == bas) == (df.mt == 1)
+    vers_bas = ((df.mt == 1) & (df.equipe == bas1)) | ((df.mt == 2) & (df.equipe == bas2))
     df["Y"] = (v.where(vers_bas, 1 - v) * 40).clip(0, 40)
     df["X"] = ((1 - u).where(vers_bas, u) * 20).clip(0, 20)
     return df.reset_index(drop=True)
 
 
-def sens_premiere_mt(df, equipes):
-    """Équipe qui attaque vers le bas de l'écran en 1re MT, déduite de la position moyenne de ses tirs."""
-    t = df[(df.mt == 1) & df.action.isin(TIRS) & df.py.notna()]
+def sens_mi_temps(df, equipes, mt, defaut=None):
+    """Équipe qui attaque vers le bas de l'écran pendant la mi-temps `mt`, d'après la position moyenne
+    de ses tirs. Sans tir positionné : `defaut` (2e MT = l'inverse de la 1re), sinon erreur."""
+    t = df[(df.mt == mt) & df.action.isin(TIRS) & df.py.notna()]
     moy = {e: t[t.equipe == e].py.mean() for e in equipes}
     a, b = equipes
+    milieu = (PITCH["top"] + PITCH["bottom"]) / 2
     if pd.isna(moy[a]) and pd.isna(moy[b]):
-        raise XmlError("Aucun tir positionné en 1re mi-temps : impossible de déduire le sens du jeu.")
+        if defaut:
+            return defaut
+        raise XmlError(f"Aucun tir positionné en {mt}{'re' if mt == 1 else 'e'} mi-temps : "
+                       "impossible de déduire le sens du jeu.")
     if pd.isna(moy[b]):
-        return a if moy[a] > (PITCH["top"] + PITCH["bottom"]) / 2 else b
+        return a if moy[a] > milieu else b
     if pd.isna(moy[a]):
-        return b if moy[b] > (PITCH["top"] + PITCH["bottom"]) / 2 else a
+        return b if moy[b] > milieu else a
     return a if moy[a] > moy[b] else b

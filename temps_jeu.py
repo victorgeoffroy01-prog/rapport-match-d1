@@ -62,9 +62,19 @@ def lire(path):
             raise TempsJeuError(f"colonne « {h} » absente de l'onglet Temps de jeu")
     joueurs, alertes = [], []
     for r in rows[1:]:
-        if not r or r[col["Nom"]] is None:
+        if not r:
             continue
-        j = dict(num=str(r[col["Numéro"]]).strip(), nom=str(r[col["Nom"]]).strip().upper(),
+        num, nom = r[col["Numéro"]], r[col["Nom"]]
+        code = str(r[col["Code"]] or "").strip() if "Code" in col else ""
+        if nom is None and code:
+            # Numéro et Nom vides mais Code rempli (« 10.MOHAMMED ») : on les reprend du code
+            m = re.fullmatch(r"(\d+)\s*\.?\s*(.+)", code)
+            if m:
+                num, nom = num or m.group(1), m.group(2)
+                alertes.append(f"Temps de jeu : ligne « {code} » sans Numéro/Nom, repris du Code")
+        if nom is None:
+            continue
+        j = dict(num=str(num).strip(), nom=str(nom).strip().upper(),
                  gardien=str(r[col["Gardien"]]).strip().upper() == "OUI" if "Gardien" in col else False,
                  mt1=_sec(r[col["Temps 1re MT"]]), mt2=_sec(r[col["Temps 2e MT"]]),
                  entrees=int(r[col["Entrées"]] or 0) if "Entrées" in col else 0)

@@ -282,6 +282,25 @@ def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
     return None
 
 
+def _but_from_team_sheet(wb, team_short, journee, minute):
+    """Repli quand la colonne « joueur » de l'onglet maître est vide : (joueur, origine) lus dans
+    l'onglet de l'équipe qui a marqué, même journée et même minute. (None, None) sinon."""
+    sheet = GOALS_SHEET_ALIASES.get(team_short, team_short)
+    sheet = next((x for x in wb.sheetnames if x.strip().upper() == str(sheet).upper()), None)
+    if sheet is None:
+        return None, None
+    ws = wb[sheet]
+    header = [c.value for c in ws[1]]
+    col = {h: i for i, h in enumerate(header) if h}
+    if not {"journee", "minute", "joueur"}.issubset(col):
+        return None, None
+    for r in range(2, ws.max_row + 1):
+        row = [ws.cell(row=r, column=c + 1).value for c in range(len(header))]
+        if _same_journee(row[col["journee"]], journee) and row[col["minute"]] == minute and row[col["joueur"]]:
+            return str(row[col["joueur"]]).strip(), (row[col["origine_but"]] if "origine_but" in col else None)
+    return None, None
+
+
 def get_home_away(goals_db_path, team_a, team_b, journee):
     """Détermine qui est domicile/extérieur pour CE match via l'onglet maître de la base buteurs
     (colonnes equipe_domicile/equipe_exterieure). Repli sur (team_a, team_b) tel quel si le match
@@ -332,7 +351,22 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         marque = row[col["equipe_marque"]]
         scorer_full = row[col["joueur"]]
         minute = row[col["minute"]]
-        origine = ((row[col["origine_but"]] or "") if "origine_but" in col else "").strip()
+        if (scorer_full is None or str(scorer_full).strip() == "") and (minute is None or str(minute).strip() == ""):
+            continue  # ligne préparée mais pas encore remplie (pas de but)
+        origine_eq = None
+        if (scorer_full is None or str(scorer_full).strip() == "") and marque:
+            # buteur parfois renseigné seulement dans l'onglet de l'équipe (ex. onglet EDF)
+            scorer_full, origine_eq = _but_from_team_sheet(wb, team_a if _eq(marque) == _eq(off_a) else team_b,
+                                                           journee, minute)
+        if scorer_full is None or str(scorer_full).strip() == "":
+            raise GoalsDbError(f"Base buteurs, onglet « {sheet_name} » ligne {r} : but de {marque} à la {minute}' "
+                               "sans buteur (colonne « joueur » vide, et rien dans l'onglet de l'équipe). "
+                               "Mets le nom du buteur, ou CSC pour un but contre son camp.")
+        if marque is None or str(marque).strip() == "":
+            raise GoalsDbError(f"Base buteurs, ligne {r} : but de {scorer_full} à la {minute}' sans équipe "
+                               "(colonne « equipe_marque » vide).")
+        scorer_full = str(scorer_full).strip()
+        origine = ((row[col["origine_but"]] or "") if "origine_but" in col else "").strip() or (origine_eq or "").strip()
         team_short = team_a if _eq(marque) == _eq(off_a) else team_b
         if not origine:
             origine = _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full) or ""
