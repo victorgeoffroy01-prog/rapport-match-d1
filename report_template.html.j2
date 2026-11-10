@@ -37,21 +37,21 @@
   .footer .pg{ font-weight:800; font-size:16px; }
 
   /* ===== PAGE 1 : COVER ===== */
-  .hero{ position:relative; display:flex; margin:34px 0 38px; }
+  .hero{ display:flex; margin:24px 0 0; }
   .hero .team{ width:50%; text-align:center; }
-  .logo-slot{ width:120px; height:96px; margin:0 auto 14px; display:flex; align-items:center; justify-content:center; }
-  .logo-slot img{ width:120px; height:96px; object-fit:contain; }
+  .logo-slot{ width:180px; height:120px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; }
+  .logo-slot img{ width:180px; height:120px; object-fit:contain; }
   .hero .tname{ font-family:'Playfair Display','Lora',serif; font-weight:800; line-height:1; color:var(--ink); white-space:nowrap; }
-  .score-hero{ position:absolute; left:0; right:0; top:0; height:96px; text-align:center; }
-  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:72px; line-height:96px; white-space:nowrap; }
-  .score-hero .sep{ color:var(--red); margin:0 12px; }
-  .scorers{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:18px; margin:10px 0 6px; }
+  .score-hero{ text-align:center; margin:12px 0 18px; }
+  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:112px; line-height:1; white-space:nowrap; }
+  .score-hero .sep{ color:var(--red); margin:0 26px; }
+  .scorers{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:18px; margin:0 0 6px; }
   .scorers .col{ text-align:center; }
   .scorers .liste{ display:inline-block; text-align:left; }
-  .scorers .col h6{ margin:0 0 10px; font-size:17px; font-weight:800; letter-spacing:.3px; color:var(--ink); font-family:'Playfair Display','Lora',serif; }
-  .scorers .goal{ display:flex; gap:12px; font-size:19px; white-space:nowrap; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
-  .scorers .goal .min{ font-weight:700; flex:0 0 40px; }
-  .byline{ text-align:right; color:var(--red); font-weight:800; font-size:14px; margin-top:8mm; }
+  .scorers .col h6{ margin:0 0 12px; font-size:19px; font-weight:800; letter-spacing:.3px; color:var(--ink); font-family:'Playfair Display','Lora',serif; }
+  .scorers .goal{ display:flex; gap:14px; font-size:1em; white-space:nowrap; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
+  .scorers .goal .min{ font-weight:700; flex:0 0 46px; }
+  .byline{ position:absolute; right:11mm; bottom:22mm; color:var(--red); font-weight:800; font-size:14px; }
   /* ===== PAGE 2 : STATS COLLECTIVES ===== */
   .stat-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
   .stat-table td{ padding:2.5px 2px; border-bottom:1px solid #E2DECF; }
@@ -158,7 +158,7 @@
   <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - {{ competition | upper }}</div>
   <hr class="rule">
   {% set lg = [team_a|length, team_b|length]|max %}
-  {% set tsize = 44 if lg <= 8 else (36 if lg <= 11 else 28) %}
+  {% set tsize = 50 if lg <= 8 else (42 if lg <= 11 else 32) %}
   <div class="hero">
     <div class="team">
       <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% endif %}</div>
@@ -168,9 +168,10 @@
       <div class="logo-slot">{% if logo_b %}<img src="{{ logo_b }}">{% endif %}</div>
       <div class="tname" style="font-size:{{ tsize }}px;">{{ team_b }}</div>
     </div>
-    <div class="score-hero"><div class="digits">{{ score_a }}<span class="sep">—</span>{{ score_b }}</div></div>
   </div>
-  <div class="scorers">
+  <div class="score-hero"><div class="digits">{{ score_a }}<span class="sep">—</span>{{ score_b }}</div></div>
+  {% set ng = [buteurs_a|length, buteurs_b|length]|max %}
+  <div class="scorers" style="font-size:{{ 22 if ng <= 4 else (18 if ng <= 6 else 15) }}px;">
     <div class="col">
       <div class="liste">
         <h6>BUTEURS {{ team_a }}</h6>
