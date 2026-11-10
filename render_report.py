@@ -19,6 +19,7 @@ import pages_match
 import temps_jeu
 import logos
 import verification
+import export_site
 from matplotlib.backends.backend_pdf import PdfPages
 from nacsport_xml import XmlError
 
@@ -180,6 +181,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     # Temps de jeu (export de l'appli temps-de-jeu-d1) : page juste après la feuille de stats de l'équipe
     apres_tj = None
     buts_chrono = None
+    tj = None
     if tj_path:
         try:
             tj = temps_jeu.lire(tj_path)
@@ -206,6 +208,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
             infos_cartes["alertes_tags"] += tj["alertes"]
         except temps_jeu.TempsJeuError as e:
             infos_cartes["erreur_tj"] = str(e)
+            tj = None
     decal = 1 if apres_tj else 0
     context["num_b"] = f"{4 + (decal if apres_tj == 3 else 0):02d}"
     context["num_gk"] = f"{5 + decal:02d}"
@@ -252,6 +255,16 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     alertes = controler(context)
     for a in alertes:
         print("⚠", a)
+
+    # Données pour le site (cartes, +/-, couloirs, temps forts, temps de jeu) : fichier .json à côté du PDF,
+    # même nom, dans le dossier rapport/ du site. Mêmes calculs que les pages du PDF.
+    try:
+        infos_cartes["json_site"], al = export_site.exporter(
+            team_a, team_b, (context["score_a"], context["score_b"]), match_info,
+            {team_a: buteurs_a, team_b: buteurs_b}, load_compo(compo_path),
+            xml_path=xml_path if infos_cartes["pdf"] else None, tj=tj)
+    except Exception as e:
+        infos_cartes["json_site"], infos_cartes["erreur_json"] = None, str(e)
 
     # Vérification finale du PDF assemblé (relu comme par un lecteur et par le site D1)
     nb_pages = 5 + decal + infos_cartes["pages"] + infos_cartes["pages_extras"]

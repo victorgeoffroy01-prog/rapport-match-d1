@@ -95,6 +95,7 @@ if generer:
             # Gardé en mémoire : les boutons de téléchargement restent après un clic
             st.session_state["resultat"] = dict(
                 pdf=pdf_bytes, nom=nom_fichier(match_info), zip=zip_bytes, alertes=alertes, cartes=ic,
+                json=ic.get("json_site"),
                 avec_xml=bool(xml_file))
         except CompoError as e:
             st.session_state.pop("resultat", None)
@@ -145,6 +146,12 @@ if res:
         st.warning("À vérifier :\n\n" + "\n".join(f"- {e}" for e in ic["verif_alertes"]))
     # Nom : J01_LAVAL-NICE (domicile-extérieur)
     st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")
+    if res.get("json"):
+        # à déposer dans le dossier rapport/ du site, à côté du PDF (même nom)
+        st.download_button("Télécharger les données pour le site (.json)", data=res["json"].encode("utf-8"),
+                           file_name=res["nom"].replace(".pdf", ".json"), mime="application/json")
+    if ic.get("erreur_json"):
+        st.error("Données pour le site non créées :\n\n" + ic["erreur_json"])
     if res["zip"]:
         st.download_button("Télécharger les cartes en images (site)", data=res["zip"],
                            file_name=res["nom"].replace(".pdf", "_cartes.zip"), mime="application/zip")
