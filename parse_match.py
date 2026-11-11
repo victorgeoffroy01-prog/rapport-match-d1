@@ -250,17 +250,32 @@ def resolve_journee(goals_db_path, team_a, team_b, journee=None):
     return found[0]
 
 
+def _mots(t):
+    """Mots d'un nom, sans accents ni ponctuation ni numéro : 'ABDESSAMAD  Mohammed' -> {'ABDESSAMAD', 'MOHAMMED'}."""
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(t or "")).encode("ascii", "ignore").decode().upper()
+    return set(re.sub(r"[^A-Z ]", " ", t).split())
+
+
 def match_scorer_name(full_name, compo_players):
-    """Fait correspondre un nom complet ('SOUFIANE EL MESRAR') à un joueur de la compo :
-    tous les mots du nom compo, OU de son alias, doivent apparaître dans le nom complet.
-    compo_players : liste de dicts {nom, alias}. Retourne le nom canonique (compo) ou None si 0/2+ matchs."""
-    full_words = set(full_name.upper().split())
+    """Fait correspondre un nom complet de la base ('ABDESSAMAD MOHAMMED') au nom de la compo ('MOHAMMED') :
+    tous les mots du nom compo (ou de son alias) doivent être dans le nom complet. Si plusieurs joueurs
+    collent, on garde celui dont le nom compo est le plus long ; égalité -> None.
+    compo_players : liste de dicts {nom, alias}. Retourne le nom de la compo ou None."""
+    full_words = _mots(full_name)
     matches = []
     for p in compo_players:
-        candidates = [p["nom"]] + ([p["alias"]] if p.get("alias") else [])
-        if any(set(c.upper().split()).issubset(full_words) for c in candidates):
-            matches.append(p["nom"])
-    return matches[0] if len(matches) == 1 else None
+        for c in [p["nom"]] + ([p["alias"]] if p.get("alias") else []):
+            w = _mots(c)
+            if w and w.issubset(full_words):
+                matches.append((len(w), p["nom"]))
+                break
+    if not matches:
+        return None
+    matches.sort(reverse=True)
+    if len(matches) > 1 and matches[0][0] == matches[1][0]:
+        return None
+    return matches[0][1]
 
 
 def _origine_from_team_sheet(wb, team_short, journee, minute, scorer_full):
@@ -373,6 +388,12 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
         candidates = players_a if team_short == team_a else players_b
         # équipe sans compo (adversaire) : on garde le nom complet de la base tel quel
         matched = match_scorer_name(scorer_full, candidates) if candidates else scorer_full.upper()
+        if matched is None:
+            # nom introuvable dans l'équipe indiquée : on regarde dans l'autre compo (equipe_marque mal lue)
+            autre = players_b if team_short == team_a else players_a
+            m2 = match_scorer_name(scorer_full, autre) if autre else None
+            if m2:
+                matched, team_short = m2, (team_b if team_short == team_a else team_a)
         entry = {"minute": f"{minute}'", "joueur": matched or f"?? ({scorer_full})", "origine": origine}
         if matched is None:
             unmatched.append(scorer_full)
@@ -383,7 +404,8 @@ def load_goals_for_match(goals_db_path, team_a, team_b, journee, compo):
     if unmatched:
         raise GoalsDbError(
             "Buteur(s) non reconnu(s) dans la compo (nom à corriger dans l'un des deux fichiers) : "
-            + ", ".join(unmatched)
+            + ", ".join(unmatched) + f". Joueurs de la compo : {team_a} = "
+            + ", ".join(p["nom"] for p in players_a) + f" ; {team_b} = " + ", ".join(p["nom"] for p in players_b)
         )
     buteurs_a.sort(key=lambda g: int(g["minute"].rstrip("'")))
     buteurs_b.sort(key=lambda g: int(g["minute"].rstrip("'")))
