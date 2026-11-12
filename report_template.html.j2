@@ -157,16 +157,16 @@
 <div class="card">
   <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - {{ competition | upper }}</div>
   <hr class="rule">
-  {% set lg = [team_a|length, team_b|length]|max %}
+  {% set lg = [affiche_a|length, affiche_b|length]|max %}
   {% set tsize = 50 if lg <= 8 else (42 if lg <= 11 else 32) %}
   <div class="hero">
     <div class="team">
       <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% endif %}</div>
-      <div class="tname" style="font-size:{{ tsize }}px;">{{ team_a }}</div>
+      <div class="tname" style="font-size:{{ tsize }}px;">{{ affiche_a }}</div>
     </div>
     <div class="team">
       <div class="logo-slot">{% if logo_b %}<img src="{{ logo_b }}">{% endif %}</div>
-      <div class="tname" style="font-size:{{ tsize }}px;">{{ team_b }}</div>
+      <div class="tname" style="font-size:{{ tsize }}px;">{{ affiche_b }}</div>
     </div>
   </div>
   <div class="score-hero"><div class="digits">{{ score_a }}<span class="sep">—</span>{{ score_b }}</div></div>
@@ -174,14 +174,14 @@
   <div class="scorers" style="font-size:{{ 22 if ng <= 4 else (18 if ng <= 6 else 15) }}px;">
     <div class="col">
       <div class="liste">
-        <h6>BUTEURS {{ team_a }}</h6>
+        <h6>BUTEURS {{ affiche_a }}</h6>
         {% for g in buteurs_a %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
         {% endfor %}
       </div>
     </div>
     <div class="col">
       <div class="liste">
-        <h6>BUTEURS {{ team_b }}</h6>
+        <h6>BUTEURS {{ affiche_b }}</h6>
         {% for g in buteurs_b %}<div class="goal"><span class="min">{{ g.minute }}</span><span>{{ g.joueur }}</span></div>
         {% endfor %}
       </div>

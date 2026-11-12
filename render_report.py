@@ -126,6 +126,11 @@ def build_stat_groups(team_stats, team_a, team_b):
     ]
 
 
+# Couverture seulement : nom complet à la place de l'abréviation. Les autres pages gardent le nom court,
+# que le site D1 lit pour reconnaître les équipes.
+NOM_AFFICHE = {"MTP": "MONTPELLIER", "NMF": "NANTES", "UJS": "TOULOUSE", "SCP": "SPORTING", "EDF": "FRANCE"}
+
+
 def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, journee_num=None,
            xml_path=None, dossier_png=None, tj_path=None):
     """
@@ -161,6 +166,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
 
     context = {
         "team_a": team_a, "team_b": team_b,
+        "affiche_a": NOM_AFFICHE.get(team_a.upper(), team_a), "affiche_b": NOM_AFFICHE.get(team_b.upper(), team_b),
         "score_a": team_stats[team_a]["buts"], "score_b": team_stats[team_b]["buts"],
         "saison": match_info["saison"], "journee": match_info["journee"],
         "competition": match_info.get("competition", "D1 FUTSAL"),
