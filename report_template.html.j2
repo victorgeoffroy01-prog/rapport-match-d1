@@ -42,9 +42,10 @@
   .logo-slot{ width:180px; height:120px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; }
   .logo-slot img{ width:180px; height:120px; object-fit:contain; }
   .hero .tname{ font-family:'Playfair Display','Lora',serif; font-weight:800; line-height:1; color:var(--ink); white-space:nowrap; }
-  .score-hero{ text-align:center; margin:12px 0 18px; }
-  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:112px; line-height:1; white-space:nowrap; }
-  .score-hero .sep{ color:var(--red); margin:0 26px; }
+  .score-hero{ position:relative; display:flex; margin:12px 0 18px; }
+  .score-hero .half{ width:50%; text-align:center; }
+  .score-hero .digits{ font-family:'Playfair Display','Lora',serif; font-weight:900; font-size:112px; line-height:1; }
+  .score-hero .sep{ position:absolute; left:50%; top:58%; width:56px; margin-left:-28px; height:12px; margin-top:-6px; background:var(--red); }
   .scorers{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:18px; margin:0 0 6px; }
   .scorers .col{ text-align:center; }
   .scorers .liste{ display:inline-block; text-align:left; }
@@ -158,7 +159,7 @@
   <div class="kicker">RAPPORT DE MATCH - {{ journee | upper }} - {{ competition | upper }}</div>
   <hr class="rule">
   {% set lg = [affiche_a|length, affiche_b|length]|max %}
-  {% set tsize = 50 if lg <= 8 else (42 if lg <= 11 else 32) %}
+  {% set tsize = 50 if lg <= 8 else (40 if lg <= 10 else (34 if lg <= 12 else 28)) %}
   <div class="hero">
     <div class="team">
       <div class="logo-slot">{% if logo_a %}<img src="{{ logo_a }}">{% endif %}</div>
@@ -169,7 +170,11 @@
       <div class="tname" style="font-size:{{ tsize }}px;">{{ affiche_b }}</div>
     </div>
   </div>
-  <div class="score-hero"><div class="digits">{{ score_a }}<span class="sep">—</span>{{ score_b }}</div></div>
+  <div class="score-hero">
+    <div class="half"><span class="digits">{{ score_a }}</span></div>
+    <div class="half"><span class="digits">{{ score_b }}</span></div>
+    <div class="sep"></div>
+  </div>
   {% set ng = [buteurs_a|length, buteurs_b|length]|max %}
   <div class="scorers" style="font-size:{{ 22 if ng <= 4 else (18 if ng <= 6 else 15) }}px;">
     <div class="col">
