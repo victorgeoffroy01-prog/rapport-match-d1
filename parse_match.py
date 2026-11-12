@@ -257,6 +257,17 @@ def _mots(t):
     return set(re.sub(r"[^A-Z ]", " ", t).split())
 
 
+def _une_lettre(a, b):
+    """True si a et b ne diffèrent que d'une lettre (remplacée, ajoutée ou enlevée)."""
+    if a == b or abs(len(a) - len(b)) > 1:
+        return a == b
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    if len(a) > len(b):
+        a, b = b, a
+    return any(b[:i] + b[i + 1:] == a for i in range(len(b)))
+
+
 def match_scorer_name(full_name, compo_players):
     """Fait correspondre un nom complet de la base ('ABDESSAMAD MOHAMMED') au nom de la compo ('MOHAMMED') :
     tous les mots du nom compo (ou de son alias) doivent être dans le nom complet. Si plusieurs joueurs
@@ -270,6 +281,17 @@ def match_scorer_name(full_name, compo_players):
             if w and w.issubset(full_words):
                 matches.append((len(w), p["nom"]))
                 break
+    if not matches:
+        # faute de frappe d'une lettre sur un mot de 5 lettres ou plus (DEL MOREL / DEL MORAL), si un seul joueur colle
+        for p in compo_players:
+            for c in [p["nom"]] + ([p["alias"]] if p.get("alias") else []):
+                w = _mots(c)
+                if w and all(m in full_words or (len(m) >= 5 and any(_une_lettre(m, f) for f in full_words))
+                             for m in w):
+                    matches.append((len(w), p["nom"]))
+                    break
+        if len(matches) != 1:
+            return None
     if not matches:
         return None
     matches.sort(reverse=True)
