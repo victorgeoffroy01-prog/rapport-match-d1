@@ -8,6 +8,7 @@ import zipfile
 import tempfile
 import os
 import streamlit as st
+import story
 from parse_match import CompoError
 from render_report import render, GoalsDbError, nom_fichier
 
@@ -146,6 +147,16 @@ if res:
         st.warning("À vérifier :\n\n" + "\n".join(f"- {e}" for e in ic["verif_alertes"]))
     # Nom : J01_LAVAL-NICE (domicile-extérieur)
     st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")
+    # même rapport en images 1080 x 1920 pour les stories Instagram (une image par page)
+    if "story" not in res:
+        try:
+            res["story"] = story.zip_story(res["pdf"])
+        except Exception as e:
+            res["story"] = None
+            st.error(f"Format story non créé : {e}")
+    if res["story"]:
+        st.download_button("Télécharger le format story Insta (1080 x 1920)", data=res["story"],
+                           file_name=res["nom"].replace(".pdf", "_story.zip"), mime="application/zip")
     if res.get("json"):
         # à déposer dans le dossier rapport/ du site, à côté du PDF (même nom)
         st.download_button("Télécharger les données pour le site (.json)", data=res["json"].encode("utf-8"),
