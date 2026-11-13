@@ -93,8 +93,18 @@ if generer:
                     for p in ic["png"]:
                         z.write(p, os.path.basename(p))
                 zip_bytes = buf.getvalue()
+            # Même rapport au format story Instagram (pages 9:16 mises en page pour ce format)
+            story_zip, erreur_story = None, None
+            try:
+                with st.spinner("Format story en cours..."):
+                    story_pdf = os.path.join(tmp, "rapport_story.pdf")
+                    render(raw_path, compo_path, dict(match_info), story_pdf, goals_db_path=goals_path,
+                           journee_num=journee_in, xml_path=xml_path, tj_path=tj_path, story=True)
+                    story_zip = story.zip_story(story_pdf)
+            except Exception as e:
+                erreur_story = str(e)
             # Gardé en mémoire : les boutons de téléchargement restent après un clic
-            st.session_state["resultat"] = dict(
+            st.session_state["resultat"] = dict(story=story_zip, erreur_story=erreur_story,
                 pdf=pdf_bytes, nom=nom_fichier(match_info), zip=zip_bytes, alertes=alertes, cartes=ic,
                 json=ic.get("json_site"),
                 avec_xml=bool(xml_file))
@@ -148,13 +158,9 @@ if res:
     # Nom : J01_LAVAL-NICE (domicile-extérieur)
     st.download_button("Télécharger le PDF", data=res["pdf"], file_name=res["nom"], mime="application/pdf")
     # même rapport en images 1080 x 1920 pour les stories Instagram (une image par page)
-    if "story" not in res:
-        try:
-            res["story"] = story.zip_story(res["pdf"])
-        except Exception as e:
-            res["story"] = None
-            st.error(f"Format story non créé : {e}")
-    if res["story"]:
+    if res.get("erreur_story"):
+        st.error(f"Format story non créé : {res['erreur_story']}")
+    if res.get("story"):
         st.download_button("Télécharger le format story Insta (1080 x 1920)", data=res["story"],
                            file_name=res["nom"].replace(".pdf", "_story.zip"), mime="application/zip")
     if res.get("json"):

@@ -132,7 +132,7 @@ NOM_AFFICHE = {"MTP": "MONTPELLIER", "NMF": "NANTES", "UJS": "TOULOUSE", "SCP": 
 
 
 def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, journee_num=None,
-           xml_path=None, dossier_png=None, tj_path=None):
+           xml_path=None, dossier_png=None, tj_path=None, story=False):
     """
     match_info attend les clés éditoriales manuelles :
     saison, journee (texte affiché), hook_text, verdict_html, factor_1 {titre, texte},
@@ -140,6 +140,17 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     Si goals_db_path + journee_num sont fournis, buteurs_a/buteurs_b (minute + origine réelles)
     sont chargés depuis la base ; sinon match_info doit fournir buteurs_a/buteurs_b à la main.
     """
+    # story=True : même rapport au format story Instagram 9:16 (pas de json ni de vérification site)
+    cartes.STORY = story
+    try:
+        return _render(raw_path, compo_path, match_info, output_pdf, goals_db_path, journee_num,
+                       xml_path, None if story else dossier_png, tj_path, story)
+    finally:
+        cartes.STORY = False
+
+
+def _render(raw_path, compo_path, match_info, output_pdf, goals_db_path, journee_num,
+            xml_path, dossier_png, tj_path, story):
     player_stats, team_stats, gv, pp = compute(raw_path, compo_path)
     teams = list(team_stats.keys())
     team_a, team_b = teams[0], teams[1]
@@ -167,6 +178,7 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     context = {
         "team_a": team_a, "team_b": team_b,
         "affiche_a": NOM_AFFICHE.get(team_a.upper(), team_a), "affiche_b": NOM_AFFICHE.get(team_b.upper(), team_b),
+        "story": story,
         "score_a": team_stats[team_a]["buts"], "score_b": team_stats[team_b]["buts"],
         "saison": match_info["saison"], "journee": match_info["journee"],
         "competition": match_info.get("competition", "D1 FUTSAL"),
@@ -242,6 +254,12 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
         infos_cartes["infos"] += inf
         infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n)
 
+    lg = max(len(context["affiche_a"]), len(context["affiche_b"]))
+    context["tsize_story"] = 62 if lg <= 6 else (54 if lg <= 8 else (46 if lg <= 10 else (40 if lg <= 12 else 34)))
+    # hauteur de ligne des feuilles joueurs en story : plus il y a de joueurs, plus c'est serré
+    nj = max(len(context.get("joueurs_a", [])), len(context.get("joueurs_b", [])), 1)
+    context["pad_story"] = max(8, min(24, int((1000 - 30 * nj) / nj / 2)))
+    context["ng_story"] = max(len(buteurs_a), len(buteurs_b))
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         template = jinja2.Template(f.read())
     html_out = template.render(**context)
@@ -261,6 +279,8 @@ def render(raw_path, compo_path, match_info, output_pdf, goals_db_path=None, jou
     alertes = controler(context)
     for a in alertes:
         print("⚠", a)
+    if story:
+        return output_pdf, alertes, infos_cartes
 
     # Données pour le site (cartes, +/-, couloirs, temps forts, temps de jeu) : fichier .json à côté du PDF,
     # même nom, dans le dossier rapport/ du site. Mêmes calculs que les pages du PDF.

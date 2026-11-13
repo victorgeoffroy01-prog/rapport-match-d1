@@ -48,7 +48,7 @@
   .score-hero .sep{ position:absolute; left:50%; top:58%; width:56px; margin-left:-28px; height:12px; margin-top:-6px; background:var(--red); }
   .scorers{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:18px; margin:0 0 6px; }
   .scorers .col{ text-align:center; }
-  .scorers .liste{ display:inline-block; text-align:left; }
+  .scorers .liste{ display:inline-block; text-align:left; vertical-align:top; }
   .scorers .col h6{ margin:0 0 12px; font-size:19px; font-weight:800; letter-spacing:.3px; color:var(--ink); font-family:'Playfair Display','Lora',serif; }
   .scorers .goal{ display:flex; gap:14px; font-size:1em; white-space:nowrap; font-family:'Playfair Display','Lora',serif; padding:4px 0; }
   .scorers .goal .min{ font-weight:700; flex:0 0 46px; }
@@ -148,6 +148,57 @@
     .card:last-child{ page-break-after:auto; }
   }
   @page{ size:200mm 200mm; margin:0; }
+{% if story %}
+  /* ===== FORMAT STORY INSTAGRAM 1080 x 1920 (9:16) : même largeur, page plus haute, tout agrandi ===== */
+  @page{ size:200mm 355.56mm; margin:0; }
+  .card{ height:355.56mm; padding:14mm 11mm 10mm; }
+  .kicker{ font-size:22px; margin-bottom:10px; }
+  .rule{ height:5px; margin-bottom:26px; }
+  .title{ font-size:46px !important; margin-bottom:22px !important; }
+  .footer{ bottom:10mm; padding-top:14px; }
+  .footer .cap{ font-size:18px; } .footer .pg{ font-size:22px; }
+  /* couverture */
+  .hero{ margin:150px 0 0; }
+  .logo-slot{ width:270px; height:180px; margin-bottom:30px; }
+  .logo-slot img{ width:270px; height:180px; }
+  .hero .tname{ font-size:{{ (tsize_story) }}px !important; }
+  .score-hero{ margin:100px 0 100px; }
+  .score-hero .digits{ font-size:210px; }
+  .score-hero .sep{ width:80px; margin-left:-40px; height:16px; margin-top:-8px; }
+  .scorers{ font-size:{{ 31 if ng_story <= 4 else (25 if ng_story <= 7 else 20) }}px !important; }
+  .scorers .col h6{ font-size:24px; margin-bottom:18px; white-space:nowrap; }
+  .scorers .goal{ gap:18px; padding:7px 0; }
+  .scorers .goal .min{ flex:0 0 64px; }
+  .byline{ font-size:20px; bottom:30mm; }
+  /* stats collectives */
+  .stat-table td{ padding:7.5px 2px; }
+  .stat-table td.va, .stat-table td.vb{ font-size:31px; width:150px; }
+  .stat-table td.lb{ font-size:19px; }
+  .stat-table tr.grp td{ font-size:16px; padding-top:16px; padding-bottom:2px; }
+  .stat-table tr.eq td{ padding:4px 2px 12px; }
+  .stat-table tr.eq img{ height:30px; width:45px; }
+  .stat-table tr.eq span{ font-size:16px; }
+  .title-logo{ height:56px; width:84px; vertical-align:-12px; }
+  /* feuilles joueurs */
+  table.pl2{ font-size:17px; }
+  table.pl2 th{ font-size:13px; padding:7px 2px; }
+  table.pl2 td{ padding:{{ pad_story }}px 2px; }
+  table.pl2 td:first-child{ font-size:17px; }
+  /* gardiens */
+  .gk-split{ margin-top:30px !important; }
+  .gk-side h6{ font-size:34px; margin-bottom:16px; padding-bottom:12px; }
+  .h6-logo{ height:38px; width:38px; vertical-align:-7px; }
+  .gk-box2, .gk-compact .gk-box2{ padding:16px 18px; margin-bottom:16px; border-radius:18px; }
+  .gk-box2 .nm, .gk-compact .gk-box2 .nm{ font-size:28px; margin-bottom:10px; }
+  .gk-box2 .grid2, .gk-compact .gk-box2 .grid2{ gap:10px 12px; }
+  .gk-box2 .grid2 div, .gk-compact .gk-box2 .grid2 div{ font-size:17px; }
+  .gk-box2 .grid2 b, .gk-compact .gk-box2 .grid2 b{ font-size:21px; }
+  .gk-box2 .relances, .gk-compact .gk-box2 .relances{ font-size:16px; margin-top:12px; padding-top:12px; line-height:1.4; }
+  .gk-box2 .hc-grid, .gk-compact .gk-box2 .hc-grid{ gap:7px 12px; margin-top:12px; padding-top:12px; }
+  .gk-box2 .hc-grid .hc-lab, .gk-compact .gk-box2 .hc-grid .hc-lab{ font-size:16px; }
+  .gk-box2 .hc-grid div:not(.hc-lab), .gk-compact .gk-box2 .hc-grid div:not(.hc-lab){ font-size:15.5px; }
+  .gk-box2 .hc-grid b, .gk-compact .gk-box2 .hc-grid b{ font-size:17px; }
+{% endif %}
 </style>
 </head>
 <body>

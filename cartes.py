@@ -30,6 +30,30 @@ import logos
 # --- Charte ---
 CREME, ENCRE, GRIS = "#F3F1EA", "#111111", "#8A8885"
 ROUGE_KICKER = "#EF3B30"
+# Format des pages : carré (PDF) ou story Instagram 1080 x 1920 (STORY = True, réglé par render_report)
+STORY = False
+LARG_IN = 7.874
+
+
+def haut_in():
+    """Hauteur de la page en pouces : 7,874 (carré 20 cm) ou 14 (story 9:16)."""
+    return LARG_IN * 16 / 9 if STORY else LARG_IN
+
+
+def yt(pouces):
+    """Ordonnée (fraction de page) à `pouces` sous le haut de la page."""
+    return 1 - pouces / haut_in()
+
+
+def yb(pouces):
+    """Ordonnée (fraction de page) à `pouces` au-dessus du bas de la page."""
+    return pouces / haut_in()
+
+
+def nouvelle_fig():
+    return plt.figure(figsize=(LARG_IN, haut_in()), dpi=200)
+
+
 COUL_EQ = ["#2F5FD0", "#E5352B"]   # 1re équipe affichée (France si présente, sinon domicile) bleu, 2e rouge
 
 # Polices : dossier fonts/ ou, à défaut, à la racine du dépôt (à côté de ce fichier)
@@ -254,6 +278,17 @@ def controler(df):
 # ---------------------------------------------------------------- mise en page
 def cadre_page(fig, kicker, titre, num):
     fig.patch.set_facecolor(CREME)
+    if STORY:
+        m = 0.2 / haut_in()          # marge du cadre : 0,2 pouce comme sur la largeur
+        fig.add_artist(FancyBboxPatch((0.025, m), 0.95, 1 - 2 * m, boxstyle="round,pad=0,rounding_size=0.025",
+                                      mutation_aspect=LARG_IN / haut_in(), transform=fig.transFigure, fc=CREME,
+                                      ec=ENCRE, lw=2.2, zorder=-10))
+        fig.text(0.07, yt(0.72), kicker.upper(), fontproperties=POPB, fontsize=13, color=ROUGE_KICKER)
+        fig.add_artist(Line2D([0.07, 0.93], [yt(0.82), yt(0.82)], transform=fig.transFigure, c=ENCRE, lw=1.6))
+        fig.text(0.07, yt(1.45), titre, fontproperties=PLAY, fontsize=32, color=ENCRE)
+        fig.add_artist(Line2D([0.07, 0.93], [yb(0.62), yb(0.62)], transform=fig.transFigure, c="#E2DECF", lw=1.2))
+        fig.text(0.93, yb(0.36), f"{num:02d}", fontproperties=POPB, fontsize=13, ha="right", color=ENCRE)
+        return
     fig.add_artist(FancyBboxPatch((0.025, 0.025), 0.95, 0.95, boxstyle="round,pad=0,rounding_size=0.025",
                                   transform=fig.transFigure, fc=CREME, ec=ENCRE, lw=2.2, zorder=-10))
     fig.text(0.07, 0.915, kicker.upper(), fontproperties=POPB, fontsize=9, color=ROUGE_KICKER)
@@ -263,9 +298,10 @@ def cadre_page(fig, kicker, titre, num):
     fig.text(0.93, 0.045, f"{num:02d}", fontproperties=POPB, fontsize=9, ha="right", color=ENCRE)
 
 
-def legende(fig, fam, x, y, col=ENCRE, largeur=0.86):
+def legende(fig, fam, x, y, col=ENCRE, largeur=0.86, fs=9):
     """Légende dessinée à la main (même rendu que sur la carte, ballon compris)."""
-    ax = fig.add_axes([x, y - 0.02, largeur, 0.04])
+    h = 0.315 / haut_in()
+    ax = fig.add_axes([x, y - h / 2, largeur, h])
     ax.set_xlim(0, 100)
     ax.set_ylim(-2, 2)
     ax.set_aspect("equal")
@@ -278,7 +314,7 @@ def legende(fig, fam, x, y, col=ENCRE, largeur=0.86):
             ballon(ax, cx, 0, 1.25)
         else:
             symbole(ax, [cx], [0], mk, plein, col, taille=1.0)
-        t = ax.text(cx + 1.8, 0, lab, fontproperties=POPS, fontsize=9, va="center", color=ENCRE)
+        t = ax.text(cx + 1.8, 0, lab, fontproperties=POPS, fontsize=fs, va="center", color=ENCRE)
         # largeur réelle du texte -> position de l'élément suivant
         bb = t.get_window_extent(renderer=fig.canvas.get_renderer())
         x1 = ax.transData.inverted().transform((bb.x1, 0))[0]
@@ -293,7 +329,41 @@ def tuiles(fig, x, y, items, col, largeur):
         fig.text(x + i * pas, y - 0.022, lab.upper(), fontproperties=POPS, fontsize=5.6, color="#55534F")
 
 
+def page_rapport_story(pdf, num, fam, df, equipes):
+    """Version story 9:16 : les deux équipes l'une sous l'autre, terrain sur toute la largeur,
+    chiffres clés en ligne sous chaque terrain."""
+    fig = nouvelle_fig()
+    cadre_page(fig, fam["kicker"], fam["titre"], num)
+    legende(fig, fam, 0.07, yt(1.95), fs=12.5)
+    cle = fam["cle"]
+    demi = fam.get("demi")
+    bloc = 5.45                                   # hauteur d'un bloc équipe, en pouces
+    h_terr = 3.75 if demi else 3.4
+    for k, eq in enumerate(equipes):
+        d = df[df.equipe == eq]
+        col = COUL_EQ[k]
+        t0 = 2.4 + k * bloc
+        nom_equipe(fig, 0.07, yt(t0 + 0.2), eq, col, fontsize=24)
+        fig.text(0.07, yt(t0 + 0.38), detail(d, cle), fontproperties=POP, fontsize=11, color="#55534F", va="top")
+        ax = fig.add_axes([0.07, yt(t0 + 0.75 + h_terr), 0.86, h_terr / haut_in()])
+        ax.set_anchor("C")
+        tracer(ax, df, fam, equipes, eq)
+        ax.apply_aspect()
+        pos = ax.get_position()
+        items = chiffres_cles(d, cle)
+        for i, (lab, val) in enumerate(items):
+            xx = 0.07 + 0.86 * (i + 0.5) / len(items)
+            yy = pos.y0 - 0.55 / haut_in()
+            fig.text(xx, yy, str(val), fontproperties=PLAY, fontsize=27, color=col, ha="center")
+            fig.text(xx, yy - 0.28 / haut_in(), lab.upper(), fontproperties=POPS, fontsize=9.5, color="#55534F",
+                     ha="center")
+    pdf.savefig(fig, facecolor=CREME)
+    plt.close(fig)
+
+
 def page_rapport(pdf, num, fam, df, equipes, png=None):
+    if STORY:
+        return page_rapport_story(pdf, num, fam, df, equipes)
     fig = plt.figure(figsize=(7.874, 7.874), dpi=200)
     cadre_page(fig, fam["kicker"], fam["titre"], num)
     legende(fig, fam, 0.07, 0.83)

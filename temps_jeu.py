@@ -100,8 +100,10 @@ def lire(path):
 
 def page(pdf, num, tj, couleur):
     """Une ligne par joueur : barre 1re MT + 2e MT, puis 1re MT, 2e MT, total, entrées, durée moyenne d'une entrée."""
-    fig = plt.figure(figsize=(7.874, 7.874), dpi=200)
+    S = C.STORY
+    fig = C.nouvelle_fig()
     C.cadre_page(fig, "Temps de jeu", "Qui a joué, et combien", num)
+    k_ = 1.35 if S else 1          # tailles de police agrandies en story
     champ = sorted([j for j in tj["joueurs"] if not j["gardien"] and j["total"] > 0], key=lambda j: -j["total"])
     gks = sorted([j for j in tj["joueurs"] if j["gardien"] and j["total"] > 0], key=lambda j: -j["total"])
     lignes = champ + gks
@@ -109,14 +111,18 @@ def page(pdf, num, tj, couleur):
 
     # colonnes (abscisses en fraction de page, alignement à droite)
     COLS = [("1re MT", 0.625), ("2e MT", 0.70), ("TOTAL", 0.785), ("ENTRÉES", 0.865), ("MOY.", 0.935)]
-    yh = 0.80
-    C.nom_equipe(fig, 0.07, yh + 0.027, tj["equipe"], couleur, fontsize=20, va="center")
+    if C.STORY:   # textes plus gros : colonnes plus espacées, barre plus courte
+        COLS = [("1re MT", 0.58), ("2e MT", 0.675), ("TOTAL", 0.785), ("ENTRÉES", 0.865), ("MOY.", 0.935)]
+    yh = C.yt(2.75) if S else 0.80
+    C.nom_equipe(fig, 0.07, yh + (0.38 / C.haut_in() if S else 0.027), tj["equipe"], couleur,
+                 fontsize=26 if S else 20, va="center")
     for lab, x in COLS:
-        fig.text(x, yh + 0.003, lab, fontproperties=C.POPB, fontsize=7, color=C.GRIS, ha="right", va="bottom")
+        fig.text(x, yh + 0.003, lab, fontproperties=C.POPB, fontsize=7 * k_, color=C.GRIS, ha="right", va="bottom")
     fig.add_artist(matplotlib.lines.Line2D([0.07, 0.935], [yh - 0.006, yh - 0.006], transform=fig.transFigure,
                                            c=C.ENCRE, lw=1.2))
 
-    ax = fig.add_axes([0.255, 0.15, 0.295, 0.635])
+    ax = fig.add_axes([0.305, C.yb(1.75), 0.2, yh - 0.12 / C.haut_in() - C.yb(1.75)] if S
+                      else [0.255, 0.15, 0.295, 0.635])
     n = len(lignes)
     y = np.arange(n)[::-1].astype(float)
     if gks:  # espace avant les gardiens
@@ -138,23 +144,29 @@ def page(pdf, num, tj, couleur):
             fig.add_artist(matplotlib.patches.Rectangle((0.065, yf - demi), 0.875, 2 * demi,
                                                         transform=fig.transFigure, fc="#EAE6D9", ec="none",
                                                         zorder=-5))
-        fig.text(0.07, yf, j["num"], fontproperties=C.POPB, fontsize=9, color=couleur, va="center")
-        fig.text(0.10, yf, j["nom"] + (" (GB)" if j["gardien"] else ""), fontproperties=C.POPS, fontsize=9,
-                 color=C.ENCRE, va="center")
+        fig.text(0.07, yf, j["num"], fontproperties=C.POPB, fontsize=9 * k_, color=couleur, va="center")
+        fig.text(0.105 if S else 0.10, yf, j["nom"] + (" (GB)" if j["gardien"] else ""), fontproperties=C.POPS,
+                 fontsize=9 * k_, color=C.ENCRE, va="center")
         moy = mmss(j["total"] / j["entrees"]) if j["entrees"] else "–"
         vals = [(mmss(j["mt1"]), C.POPS, 9, "#3A3936"), (mmss(j["mt2"]), C.POPS, 9, "#3A3936"),
-                (mmss(j["total"]), C.PLAY, 13, C.ENCRE), (str(j["entrees"]), C.POPS, 9, "#3A3936"),
+                (mmss(j["total"]), C.PLAY, 11.5 if S else 13, C.ENCRE), (str(j["entrees"]), C.POPS, 9, "#3A3936"),
                 (moy, C.POPS, 9, "#3A3936")]
         for (txt, fp, fs, col), (_, x) in zip(vals, COLS):
             fig.text(x - (0.025 if txt == str(j["entrees"]) and x == 0.865 else 0), yf, txt, fontproperties=fp,
-                     fontsize=fs, color=col, ha="right", va="center")
+                     fontsize=fs * k_, color=col, ha="right", va="center")
 
     # légende
-    for x, c, lab in ((0.255, couleur, "1re MT"), (0.345, c2, "2e MT")):
-        fig.add_artist(matplotlib.patches.Rectangle((x, 0.108), 0.016, 0.016, transform=fig.transFigure,
+    yl = C.yb(1.3) if S else 0.116
+    for x, c, lab in ((0.305 if S else 0.255, couleur, "1re MT"), (0.41 if S else 0.345, c2, "2e MT")):
+        cote = 0.022 if S else 0.016
+        fig.add_artist(matplotlib.patches.Rectangle((x, yl - cote * C.LARG_IN / C.haut_in() / 2), cote,
+                                                    cote * C.LARG_IN / C.haut_in(), transform=fig.transFigure,
                                                     fc=c, ec="none"))
-        fig.text(x + 0.022, 0.116, lab, fontproperties=C.POPS, fontsize=8, color=C.ENCRE, va="center")
-    fig.text(0.07, 0.083, "Entrées : nombre de fois où le joueur est entré sur le terrain · "
-             "Moy. : durée moyenne d'une entrée", fontproperties=C.POP, fontsize=6.5, color=C.GRIS)
+        fig.text(x + cote + 0.008, yl, lab, fontproperties=C.POPS, fontsize=8 * k_, color=C.ENCRE, va="center")
+    fig.text(0.07, C.yb(0.85) if S else 0.083,
+             "Entrées : nombre de fois où le joueur est entré sur le terrain\nMoy. : durée moyenne d'une entrée"
+             if S else "Entrées : nombre de fois où le joueur est entré sur le terrain · "
+             "Moy. : durée moyenne d'une entrée", fontproperties=C.POP, fontsize=6.5 * k_, color=C.GRIS,
+             linespacing=1.4)
     pdf.savefig(fig, facecolor=C.CREME)
     plt.close(fig)

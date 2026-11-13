@@ -12,6 +12,7 @@ import difflib
 import xml.etree.ElementTree as ET
 import numpy as np
 import matplotlib
+import matplotlib.patches
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -242,7 +243,7 @@ def momentum(df, equipes, reperes, inst):
 
 # ------------------------------------------------------------------ dessin
 def _fig(num, kicker, titre):
-    fig = plt.figure(figsize=(7.874, 7.874), dpi=200)
+    fig = C.nouvelle_fig()
     C.cadre_page(fig, kicker, titre, num)
     return fig
 
@@ -259,7 +260,73 @@ def _min_txt(m, e=None):
     return f"{min(proches, key=lambda mb: abs(mb - mc)) if proches else mc}'"
 
 
+def _presents_txt(b, data, equipes):
+    eq_pres = b["equipe"] if b["presents"][b["equipe"]] else \
+        next((e for e in equipes if b["presents"][e]), b["equipe"])
+    pres = b["presents"][eq_pres]
+    champ = [p for p in pres if p not in data["gardiens"]]
+    gk = [p for p in pres if p in data["gardiens"]]
+    prefixe = f"{eq_pres} : " if eq_pres != b["equipe"] else ""   # but encaissé : nos joueurs présents
+    if not pres:
+        return "joueurs non cochés"
+    return prefixe + "  ".join(champ) + (f"  ·  GB {gk[0]}" if gk else "")
+
+
+def page_terrain_story(pdf, num, data, equipes):
+    """Story 9:16 : les buts en haut sur toute la largeur, le bilan par joueur dessous."""
+    fig = _fig(num, "Sur le terrain", "Qui était là sur les buts")
+    col = {e: C.COUL_EQ[k] for k, e in enumerate(equipes)}
+    lignes = sorted(data["stats"], key=lambda s: (equipes.index(s["equipe"]), -(s["pour"] - s["contre"]), s["nom"]))
+    dispo = 13.25 - 2.15 - 0.7                                   # pouces utiles (titre et note de bas exclus)
+    pas_b = min(0.82, 0.5 * dispo / max(1, len(data["buts"])))
+    pas_j = min(0.42, (dispo - pas_b * len(data["buts"]) - 0.8) / max(1, len(lignes)))
+    t = 2.15
+    fig.text(0.07, C.yt(t), "LES BUTS", fontproperties=C.POPB, fontsize=11.5, color=C.GRIS)
+    t += 0.5
+    for b in data["buts"]:
+        c = col[b["equipe"]]
+        mn = _min_txt(b["minute"], b["equipe"])
+        xt = 0.2 if mn else 0.07          # sans chrono : pas de minute, le texte part du bord
+        fig.text(0.07, C.yt(t + 0.08), mn, fontproperties=C.PLAY, fontsize=27, color=c, va="center")
+        fig.text(xt, C.yt(t - 0.06), (b["buteur"] or "?") + f"  ·  {b['equipe']}", fontproperties=C.POPB,
+                 fontsize=13.5, color=c if not mn else C.ENCRE, va="center")
+        fig.text(xt, C.yt(t + 0.2), _presents_txt(b, data, equipes), fontproperties=C.POPS, fontsize=10.5,
+                 color="#3A3936", va="center")
+        t += pas_b
+    t += 0.15
+    fig.add_artist(Line2D([0.07, 0.93], [C.yt(t), C.yt(t)], transform=fig.transFigure, c="#E2DECF", lw=1.2))
+    t += 0.4
+    fig.text(0.07, C.yt(t), "JOUEUR", fontproperties=C.POPB, fontsize=11.5, color=C.GRIS)
+    for lab, xx in (("POUR", 0.71), ("CONTRE", 0.83), ("+/-", 0.93)):
+        fig.text(xx, C.yt(t), lab, fontproperties=C.POPB, fontsize=11.5, color=C.GRIS, ha="right")
+    t += 0.45
+    for k, s_ in enumerate(lignes):
+        c = col[s_["equipe"]]
+        y = C.yt(t)
+        if k % 2 == 0:
+            fig.add_artist(matplotlib.patches.Rectangle((0.065, y - pas_j / 2 / C.haut_in()), 0.875,
+                                                        pas_j / C.haut_in(), transform=fig.transFigure,
+                                                        fc="#EAE6D9", ec="none", zorder=-5))
+        nom = s_["nom"] + (" (GB)" if s_["nom"] in data["gardiens"] else "")
+        fig.text(0.075, y, str(s_["num"]), fontproperties=C.POPB, fontsize=12, color=c, va="center")
+        fig.text(0.13, y, nom, fontproperties=C.POPS, fontsize=12, color=C.ENCRE, va="center")
+        fig.text(0.71, y, str(s_["pour"]), fontproperties=C.PLAY, fontsize=17, color=c, ha="right", va="center")
+        contre = str(s_["contre"]) if s_["contre_connu"] else "–"
+        fig.text(0.83, y, contre, fontproperties=C.PLAY, fontsize=17, color=C.ENCRE, ha="right", va="center")
+        pm = s_["pour"] - s_["contre"] if s_["contre_connu"] else s_["pour"]
+        fig.text(0.93, y, (f"{'+' if pm > 0 else ''}{pm}") if s_["contre_connu"] else "–", fontproperties=C.PLAY,
+                 fontsize=17, color=c, ha="right", va="center")
+        t += pas_j
+    fig.text(0.07, C.yb(0.85), "Pour : buts de l'équipe avec le joueur sur le terrain · Contre : buts encaissés\n"
+             "avec lui sur le terrain · GB : gardien", fontproperties=C.POP, fontsize=9, color=C.GRIS,
+             linespacing=1.4)
+    pdf.savefig(fig, facecolor=C.CREME)
+    plt.close(fig)
+
+
 def page_terrain(pdf, num, data, equipes):
+    if C.STORY:
+        return page_terrain_story(pdf, num, data, equipes)
     fig = _fig(num, "Sur le terrain", "Qui était là sur les buts")
     col = {e: C.COUL_EQ[k] for k, e in enumerate(equipes)}
     # gauche : chaque but avec les 5 présents
@@ -313,18 +380,23 @@ def page_terrain(pdf, num, data, equipes):
 def page_entrees(pdf, num, data, equipes):
     fig = _fig(num, "Progression", "Par où on attaque")
     eqs = [e for e in equipes if e in data]
+    S = C.STORY
     bloc = 0.72 / len(eqs)
     for j, e in enumerate(eqs):
         col = C.COUL_EQ[equipes.index(e)]
         d = data[e]
-        haut = 0.815 - j * bloc
-        C.nom_equipe(fig, 0.07, haut, e, col)
+        haut = C.yt(2.45 + j * 5.35) if S else 0.815 - j * bloc
+        C.nom_equipe(fig, 0.07, haut, e, col, fontsize=24 if S else 17)
         autres = d["possessions"] - d["total"]
-        fig.text(0.07, haut - 0.022, f"{d['total']} possessions parties de notre moitié. Les {autres} autres "
+        fig.text(0.07, haut - (0.25 / C.haut_in() if S else 0.022),
+                 f"{d['total']} possessions parties de notre moitié. Les {autres} autres "
+                 "démarrent déjà\ndans le camp adverse (touches, corners, coups francs, récupérations hautes)."
+                 if S else
+                 f"{d['total']} possessions parties de notre moitié. Les {autres} autres "
                  "démarrent déjà dans le camp adverse\n(touches, corners, coups francs, récupérations hautes).",
-                 fontproperties=C.POP, fontsize=7.5, color="#55534F", va="top", linespacing=1.4)
-        h_terrain = bloc - 0.19
-        ax = fig.add_axes([0.07, haut - 0.06 - h_terrain, 0.86, h_terrain])
+                 fontproperties=C.POP, fontsize=10.5 if S else 7.5, color="#55534F", va="top", linespacing=1.4)
+        h_terrain = 3.45 / C.haut_in() if S else bloc - 0.19
+        ax = fig.add_axes([0.07, haut - (0.95 / C.haut_in() if S else 0.06) - h_terrain, 0.86, h_terrain])
         ax.set_anchor("C")
         C.terrain(ax)
         ax.annotate("", xy=(C.L + 1.3, -0.6), xytext=(C.L - 5, -0.6),
@@ -349,14 +421,14 @@ def page_entrees(pdf, num, data, equipes):
         items = [("Entrées camp adverse", f"{d['total'] - s_['n']}/{d['total']}"), ("Couloir favori", fav)]
         ax.apply_aspect()
         pos = ax.get_position()
-        yk = pos.y0 - 0.06
+        yk = pos.y0 - (0.62 / C.haut_in() if S else 0.06)
         for i, (lab, val) in enumerate(items):
             xx = pos.x0 + pos.width * (0.30 if i == 0 else 0.70)
-            fig.text(xx, yk, str(val), fontproperties=C.PLAY, fontsize=21, color=col, ha="center")
-            fig.text(xx, yk - 0.022, lab.upper(), fontproperties=C.POPS, fontsize=7, color="#55534F",
-                     ha="center")
-    fig.text(0.07, 0.09, "Couloir où le ballon franchit la ligne médiane, une fois par possession",
-             fontproperties=C.POP, fontsize=6.5, color=C.GRIS)
+            fig.text(xx, yk, str(val), fontproperties=C.PLAY, fontsize=29 if S else 21, color=col, ha="center")
+            fig.text(xx, yk - (0.3 / C.haut_in() if S else 0.022), lab.upper(), fontproperties=C.POPS,
+                     fontsize=10 if S else 7, color="#55534F", ha="center")
+    fig.text(0.07, C.yb(0.85) if S else 0.09, "Couloir où le ballon franchit la ligne médiane, une fois par possession",
+             fontproperties=C.POP, fontsize=9 if S else 6.5, color=C.GRIS)
     pdf.savefig(fig, facecolor=C.CREME)
     plt.close(fig)
 
@@ -367,12 +439,14 @@ def page_momentum(pdf, num, val, buts, equipes):
     tr = val.reshape(2, 20, 2).sum(axis=2)          # (équipe, tranche de 2 min)
     net = tr[0] - tr[1]
     mx = max(1e-6, np.abs(net).max())
-    ax = fig.add_axes([0.07, 0.12, 0.86, 0.68])
+    S = C.STORY
+    ax = fig.add_axes([0.07, C.yb(1.2), 0.86, C.yt(2.2) - C.yb(1.2)] if S else [0.07, 0.12, 0.86, 0.68])
     x = np.arange(20) * 2 + 1
     ax.bar(x, net, width=1.7, color=[C.COUL_EQ[0] if v >= 0 else C.COUL_EQ[1] for v in net], zorder=3)
     ax.axhline(0, color=C.ENCRE, lw=1.2, zorder=4)
     ax.axvline(20, color=C.GRIS, lw=1, ls=(0, (3, 3)), zorder=2)
-    ax.text(20, mx * 1.42, "MI-TEMPS", fontproperties=C.POPB, fontsize=6.5, color=C.GRIS, ha="center")
+    ax.text(20, mx * 1.42, "MI-TEMPS", fontproperties=C.POPB, fontsize=10 if S else 6.5, color=C.GRIS,
+            ha="center")
     ax.set_xlim(0, 40)
     ax.set_ylim(-mx * 1.5, mx * 1.5)
     # buts : ballon au-dessus de la tranche, du côté de l'équipe qui marque
@@ -387,12 +461,13 @@ def page_momentum(pdf, num, val, buts, equipes):
         xb = 2 * k + 1 + (dx - 0.5) * 0.9 if dx or any(min(19, int(mm // 2)) == k and ee == e and mm != m
                                                        for ee, mm in buts) else 2 * k + 1
         yb = sg * h
-        ax.scatter([xb], [yb], s=120, c="white", edgecolors=C.ENCRE, linewidths=0.9, zorder=6)
-        ax.scatter([xb], [yb], marker="p", s=28, c=C.ENCRE, zorder=7)
-        ax.text(xb, yb + sg * mx * 0.11, _min_txt(m, e), fontproperties=C.POPB, fontsize=7, color=C.COUL_EQ[j],
+        ax.scatter([xb], [yb], s=230 if S else 120, c="white", edgecolors=C.ENCRE, linewidths=0.9, zorder=6)
+        ax.scatter([xb], [yb], marker="p", s=55 if S else 28, c=C.ENCRE, zorder=7)
+        ax.text(xb, yb + sg * mx * (0.09 if S else 0.11), _min_txt(m, e), fontproperties=C.POPB,
+                fontsize=10.5 if S else 7, color=C.COUL_EQ[j],
                 ha="center", va="center")
     ax.set_xticks(range(0, 41, 4))
-    ax.set_xticklabels([f"{m}'" for m in range(0, 41, 4)], fontproperties=C.POP, fontsize=7.5)
+    ax.set_xticklabels([f"{m}'" for m in range(0, 41, 4)], fontproperties=C.POP, fontsize=10.5 if S else 7.5)
     ax.set_yticks([])
     for sp in ("top", "right", "left"):
         ax.spines[sp].set_visible(False)
@@ -400,7 +475,7 @@ def page_momentum(pdf, num, val, buts, equipes):
     ax.patch.set_alpha(0)
     for j, yy in ((0, mx * 1.38), (1, -mx * 1.18)):
         xf, yf = fig.transFigure.inverted().transform(ax.transData.transform((0.3, yy)))
-        C.nom_equipe(fig, xf, yf, equipes[j], C.COUL_EQ[j], fontsize=16, va="center")
+        C.nom_equipe(fig, xf, yf, equipes[j], C.COUL_EQ[j], fontsize=22 if S else 16, va="center")
     pdf.savefig(fig, facecolor=C.CREME)
     plt.close(fig)
 
