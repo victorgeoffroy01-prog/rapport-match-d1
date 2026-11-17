@@ -211,7 +211,7 @@ def _gardiens(mots, equipes):
     out = {0: [], 1: []}
     for cote in (0, 1):
         zone = [m for m in mots if (m[0] >= 500) == bool(cote) and y_min <= m[1] < BAS]
-        noms = [m for m in zone if re.fullmatch(r"[A-ZÀ-Ý][A-ZÀ-Ý.'\-]{2,}", m[2]) and _sa(m[2]) not in interdits]
+        noms = [m for m in zone if re.fullmatch(r"[A-ZÀ-Ý][A-ZÀ-Ý.'\-]{1,}", m[2]) and _sa(m[2]) not in interdits]
         lignes_noms = _lignes(noms, 8)
         for i, lg in enumerate(lignes_noms):
             y0 = sum(m[1] for m in lg) / len(lg)

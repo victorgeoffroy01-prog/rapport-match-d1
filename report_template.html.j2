@@ -54,17 +54,17 @@
   .scorers .goal .min{ font-weight:700; flex:0 0 46px; }
   .byline{ position:absolute; right:11mm; bottom:22mm; color:var(--red); font-weight:800; font-size:14px; }
   /* ===== PAGE 2 : STATS COLLECTIVES ===== */
-  .stat-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
+  .stat-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; table-layout:fixed; }
   .stat-table td{ padding:2.5px 2px; border-bottom:1px solid #E2DECF; }
-  .stat-table td.va{ width:110px; text-align:center; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:19px; line-height:1.15; color:var(--team-a); }
-  .stat-table td.vb{ width:110px; text-align:center; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:19px; line-height:1.15; color:var(--team-b); }
+  .stat-table td.va{ width:175px; text-align:center; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:19px; line-height:1.15; color:var(--team-a); }
+  .stat-table td.vb{ width:175px; text-align:center; font-family:'Playfair Display','Lora',serif; font-weight:800; font-size:19px; line-height:1.15; color:var(--team-b); }
   .stat-table td.lb{ text-align:center; font-size:13.5px; color:var(--ink); font-weight:600; }
   .stat-table tr.grp td{ padding-top:7px; padding-bottom:1px; font-weight:800; font-size:12px; color:var(--gray); text-transform:uppercase; border-bottom:none; text-align:center; letter-spacing:.4px; }
 
-  .stat-table tr.eq td{ border-bottom:2px solid var(--ink); padding:2px 2px 5px; }
+  .stat-table tr.eq td{ border-bottom:2px solid var(--ink); padding:0 2px 4px; }
   .stat-table tr.eq td{ text-align:center; color:var(--ink); white-space:nowrap; }
-  .stat-table tr.eq img{ height:20px; width:30px; object-fit:contain; vertical-align:middle; margin-left:6px; }
-  .stat-table tr.eq span{ font-family:'Poppins',sans-serif; font-size:11px; font-weight:800; letter-spacing:.3px; vertical-align:middle; color:var(--ink); }
+  .stat-table tr.eq img{ height:32px; width:48px; object-fit:contain; vertical-align:middle; margin-left:8px; }
+  .stat-table tr.eq span{ font-family:'Poppins',sans-serif; font-size:16px; font-weight:800; letter-spacing:.3px; vertical-align:middle; color:var(--ink); }
   .title-logo{ height:40px; width:60px; object-fit:contain; vertical-align:-10px; margin-right:12px; }
   .h6-logo{ height:28px; width:28px; object-fit:contain; vertical-align:-5px; margin-right:8px; }
 
@@ -172,12 +172,13 @@
   .byline{ font-size:20px; bottom:30mm; }
   /* stats collectives */
   .stat-table td{ padding:7.5px 2px; }
-  .stat-table td.va, .stat-table td.vb{ font-size:31px; width:150px; }
+  .stat-table td.va, .stat-table td.vb{ font-size:31px; width:215px; }
+  .stat-table{ margin-top:22px; }
   .stat-table td.lb{ font-size:19px; }
   .stat-table tr.grp td{ font-size:16px; padding-top:16px; padding-bottom:2px; }
   .stat-table tr.eq td{ padding:4px 2px 12px; }
-  .stat-table tr.eq img{ height:30px; width:45px; }
-  .stat-table tr.eq span{ font-size:16px; }
+  .stat-table tr.eq img{ height:40px; width:60px; margin-left:10px; }
+  .stat-table tr.eq span{ font-size:21px; }
   .title-logo{ height:56px; width:84px; vertical-align:-12px; }
   /* feuilles joueurs */
   table.pl2{ font-size:17px; }
