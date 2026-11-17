@@ -23,12 +23,13 @@
   .card{
     width:200mm; height:200mm;
     background:var(--cream);
-    border:7px solid var(--ink);
-    border-radius:22px;
-    padding:10mm 11mm 8mm;
+    padding:11.85mm 13mm 9.85mm;
     position:relative;
     overflow:hidden;
   }
+  /* cadre noir identique à celui des pages graphiques : 5 mm du bord, coins arrondis 5 mm, trait 2,2 pt */
+  .card::before{ content:''; position:absolute; left:5mm; top:5mm; right:5mm; bottom:5mm;
+    border:2.2pt solid var(--ink); border-radius:5mm; pointer-events:none; }
   .kicker{ color:var(--red); font-weight:800; font-size:16px; letter-spacing:0.3px; margin-bottom:6px; }
   .rule{ height:4px; background:var(--ink); border:none; margin:0 0 16px; }
   .title{ font-family:'Playfair Display','Lora',serif; font-weight:900; color:var(--ink); line-height:1.03; margin:0; }
@@ -151,7 +152,7 @@
 {% if story %}
   /* ===== FORMAT STORY INSTAGRAM 1080 x 1920 (9:16) : même largeur, page plus haute, tout agrandi ===== */
   @page{ size:200mm 355.56mm; margin:0; }
-  .card{ height:355.56mm; padding:14mm 11mm 10mm; }
+  .card{ height:355.56mm; padding:15.85mm 13mm 11.85mm; }
   .kicker{ font-size:22px; margin-bottom:10px; }
   .rule{ height:5px; margin-bottom:26px; }
   .title{ font-size:46px !important; margin-bottom:22px !important; }

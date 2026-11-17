@@ -255,7 +255,7 @@ def _render(raw_path, compo_path, match_info, output_pdf, goals_db_path, journee
         infos_cartes.update(pdf_extras=pdf_extras if n else None, pages_extras=n)
 
     lg = max(len(context["affiche_a"]), len(context["affiche_b"]))
-    context["tsize_story"] = 62 if lg <= 6 else (54 if lg <= 8 else (46 if lg <= 10 else (40 if lg <= 12 else 34)))
+    context["tsize_story"] = 62 if lg <= 6 else (52 if lg <= 8 else (42 if lg <= 10 else (37 if lg <= 12 else 31)))
     # hauteur de ligne des feuilles joueurs en story : plus il y a de joueurs, plus c'est serré
     nj = max(len(context.get("joueurs_a", [])), len(context.get("joueurs_b", [])), 1)
     context["pad_story"] = max(8, min(24, int((1000 - 30 * nj) / nj / 2)))

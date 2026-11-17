@@ -337,12 +337,12 @@ def page_rapport_story(pdf, num, fam, df, equipes):
     legende(fig, fam, 0.07, yt(1.95), fs=12.5)
     cle = fam["cle"]
     demi = fam.get("demi")
-    bloc = 5.45                                   # hauteur d'un bloc équipe, en pouces
-    h_terr = 3.75 if demi else 3.4
+    bloc = 5.55                                   # hauteur d'un bloc équipe, en pouces
+    h_terr = 3.55 if demi else 3.4
     for k, eq in enumerate(equipes):
         d = df[df.equipe == eq]
         col = COUL_EQ[k]
-        t0 = 2.4 + k * bloc
+        t0 = 2.35 + k * bloc
         nom_equipe(fig, 0.07, yt(t0 + 0.2), eq, col, fontsize=24)
         fig.text(0.07, yt(t0 + 0.38), detail(d, cle), fontproperties=POP, fontsize=11, color="#55534F", va="top")
         ax = fig.add_axes([0.07, yt(t0 + 0.75 + h_terr), 0.86, h_terr / haut_in()])
@@ -353,9 +353,9 @@ def page_rapport_story(pdf, num, fam, df, equipes):
         items = chiffres_cles(d, cle)
         for i, (lab, val) in enumerate(items):
             xx = 0.07 + 0.86 * (i + 0.5) / len(items)
-            yy = pos.y0 - 0.55 / haut_in()
+            yy = pos.y0 - 0.45 / haut_in()
             fig.text(xx, yy, str(val), fontproperties=PLAY, fontsize=27, color=col, ha="center")
-            fig.text(xx, yy - 0.28 / haut_in(), lab.upper(), fontproperties=POPS, fontsize=9.5, color="#55534F",
+            fig.text(xx, yy - 0.26 / haut_in(), lab.upper(), fontproperties=POPS, fontsize=9.5, color="#55534F",
                      ha="center")
     pdf.savefig(fig, facecolor=CREME)
     plt.close(fig)
